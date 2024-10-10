@@ -10,16 +10,36 @@ class conv_block(nn.Module):
     """
     Convolution Block 
     """
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, dropout=0.0):
         super(conv_block, self).__init__()
         
+        # layers = []
+        # layers.append([
+        #     nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
+        #     nn.BatchNorm2d(out_ch),
+        #     nn.ReLU(inplace=True)
+        #     ])
+        
+        # if dropout != None:
+        #     layers.append(nn.Dropout(dropout))
+        
+        # layers.append([
+        #     nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
+        #     nn.BatchNorm2d(out_ch),
+        #     nn.ReLU(inplace=True)
+        # ])
+        # self.conv = nn.Sequential(*layers)
+
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
             nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True))
+            nn.ReLU(inplace=True),
+            # nn.Dropout(dropout), ???
+        )
 
     def forward(self, x):
 
@@ -31,13 +51,28 @@ class up_conv(nn.Module):
     """
     Up Convolution Block
     """
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, dropout=0.0):
         super(up_conv, self).__init__()
+
+        # layers = []
+
+        # layers.append([
+        #     nn.Upsample(scale_factor=2),
+        #     nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
+        #     nn.BatchNorm2d(out_ch),
+        #     nn.ReLU(inplace=True)
+        # ])
+        # if dropout != None:
+        #     layers.append(nn.Dropout(dropout))
+        
+        # self.up = nn.Sequential(*layers)
+        
         self.up = nn.Sequential(
             nn.Upsample(scale_factor=2),
             nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1, bias=True),
             nn.BatchNorm2d(out_ch),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout)
         )
 
     def forward(self, x):
@@ -50,8 +85,9 @@ class U_Net(nn.Module):
     UNet - Basic Implementation
     Paper : https://arxiv.org/abs/1505.04597
     """
-    def __init__(self, in_ch=3, out_ch=1, dropout=None): #TODO: add dropout
+    def __init__(self, in_ch=3, out_ch=15, dropout=0.0): #TODO: add dropout
         super(U_Net, self).__init__()
+        self.dropout = dropout
 
         n1 = 16
         filters = [n1, n1 * 2, n1 * 4, n1 * 8, n1 * 16]
@@ -61,27 +97,27 @@ class U_Net(nn.Module):
         self.Maxpool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.Maxpool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.Conv1 = conv_block(in_ch, filters[0])
-        self.Conv2 = conv_block(filters[0], filters[1])
-        self.Conv3 = conv_block(filters[1], filters[2])
-        self.Conv4 = conv_block(filters[2], filters[3])
-        self.Conv5 = conv_block(filters[3], filters[4])
+        self.Conv1 = conv_block(in_ch, filters[0], self.dropout)
+        self.Conv2 = conv_block(filters[0], filters[1], self.dropout)
+        self.Conv3 = conv_block(filters[1], filters[2], self.dropout)
+        self.Conv4 = conv_block(filters[2], filters[3], self.dropout)
+        self.Conv5 = conv_block(filters[3], filters[4], self.dropout)
 
-        self.Up5 = up_conv(filters[4], filters[3])
-        self.Up_conv5 = conv_block(filters[4], filters[3])
+        self.Up5 = up_conv(filters[4], filters[3], self.dropout)
+        self.Up_conv5 = conv_block(filters[4], filters[3], self.dropout)
 
-        self.Up4 = up_conv(filters[3], filters[2])
-        self.Up_conv4 = conv_block(filters[3], filters[2])
+        self.Up4 = up_conv(filters[3], filters[2], self.dropout)
+        self.Up_conv4 = conv_block(filters[3], filters[2], self.dropout)
 
-        self.Up3 = up_conv(filters[2], filters[1])
-        self.Up_conv3 = conv_block(filters[2], filters[1])
+        self.Up3 = up_conv(filters[2], filters[1], self.dropout)
+        self.Up_conv3 = conv_block(filters[2], filters[1], self.dropout)
 
-        self.Up2 = up_conv(filters[1], filters[0])
-        self.Up_conv2 = conv_block(filters[1], filters[0])
+        self.Up2 = up_conv(filters[1], filters[0], self.dropout)
+        self.Up_conv2 = conv_block(filters[1], filters[0], self.dropout)
 
         self.Conv = nn.Conv2d(filters[0], out_ch, kernel_size=1, stride=1, padding=0)
 
-       # self.active = torch.nn.Sigmoid()
+        self.active = torch.nn.Sigmoid()
 
     def forward(self, x):
 
@@ -118,6 +154,6 @@ class U_Net(nn.Module):
 
         out = self.Conv(d2)
 
-        #d1 = self.active(out)
+        d1 = self.active(out)
 
-        return out
+        return d1

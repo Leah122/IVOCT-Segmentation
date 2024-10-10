@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 import numpy as np
+import argparse
 
 from model2 import U_Net
 from model import Model
@@ -100,11 +101,14 @@ class Trainer:
             batch_size=1,
         )
 
+
+
     def call_model(self, batch: dict):
-        images = batch["image"].to(self.device)
+        images = batch["image"].swapaxes(2,3).swapaxes(1,2).to(self.device) # need to swap axes to put color channels at the front
         labels = batch["labels"].to(self.device)
 
         outputs = self.model(images)
+        # TODO: outputs should be argmaxed to get the labels i think.
         losses = dice_loss(outputs, labels)
 
         outputs = outputs.detach().cpu().numpy()
@@ -138,7 +142,6 @@ class Trainer:
         self.optimizer.zero_grad()
         loss = np.mean(losses)
         return loss
-    
 
 
     def validation(self):
@@ -163,7 +166,7 @@ class Trainer:
         loss = np.mean(losses)
 
         return loss
-
+    
     
     
     def train(self):
@@ -199,6 +202,32 @@ class Trainer:
 
             np.save(self.save_dir / "metrics.npy", metrics)
 
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", type=str, help='path to the directory that contains the data')
+    parser.add_argument("--save_dir", type=str, help='path to the directory that you want to save in')
+
+    args = parser.parse_args()
+    data_dir = Path(args.data_dir)
+    save_dir = Path(args.save_dir)
+
+    trainer = Trainer(
+        data_dir=data_dir,
+        save_dir=save_dir,
+        epochs=2,
+        batch_size=16,
+        dropout=None,
+        learning_rate=1e-4,
+        weight_decay=0.0
+    )
+    trainer.train()
+
+if __name__ == "__main__":
+    main()
+
+
+
 # for i, sample in enumerate(dataloader_train):
 #     print(sample["image"].shape)
     # plt.imsave(f"train_{i}.jpg", sample["image"].reshape((704,704,3)).numpy())
@@ -209,3 +238,4 @@ class Trainer:
 
 # model = Model()
 # print(summary(model, input_size=(3,704,704)))
+
