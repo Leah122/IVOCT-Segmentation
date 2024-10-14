@@ -6,6 +6,9 @@ from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
+import torchvision.transforms.functional as tf
+torch.manual_seed(17)
+import random
 
 from constants import INPUT_SIZE, CHANNELS, STATE
 
@@ -15,9 +18,14 @@ class OCTDataset(Dataset):
         data_dir: Path = Path('./data'),
         validation: bool = False,
         test: bool = False,
+        aug_rotations: int = 0,
+        aug_flip_chance: float = 0,
+
     ):
         self.validation = validation
         self.test = test
+        self.aug_rotations = aug_rotations
+        self.aug_flip_chance = aug_flip_chance
 
         # set data directory depending on data split
         if self.test:
@@ -34,6 +42,49 @@ class OCTDataset(Dataset):
         # print(self.files)
 
         self.load_images(self.files)
+
+    def augment(self, index):
+        image = torch.Tensor(self.raw_images[index]).permute(2,0,1)
+        labels = torch.Tensor(self.raw_segmentation_labels[index].reshape((1,704,704)))
+
+        #TODO: possible additions: ColorJitter, RandomAdjustSharpness
+        #TODO: check if v2 is available on the cluster
+        #TODO: somehow save the flips and rotation as metadata.
+        
+        hflip = False
+        vflip = False
+
+        # Random horizontal flipping
+        if random.random() > self.aug_flip_chance:
+            image = tf.hflip(image)
+            labels = tf.hflip(labels)
+            hflip = True
+
+        if random.random() > self.aug_flip_chance:
+            image = tf.vflip(image)
+            labels = tf.vflip(labels)
+            vflip = True
+
+        rotation = random.randint(-self.aug_rotations, self.aug_rotations)
+        image = tf.rotate(image, rotation)
+        labels = tf.rotate(labels, rotation)
+
+        # transform = tf.Compose([
+        #     tf.RandomHorizontalFlip(self.aug_flip_chance),
+        #     tf.RandomVerticalFlip(self.aug_flip_chance),
+        #     tf.RandomRotation(self.aug_rotations),
+        # ])
+        
+        # image = transform(image)
+        # labels = transform(labels)
+
+        self.metadata[index].update({
+            "hflip": hflip,
+            "vflip": vflip,
+            "rotation": rotation,
+        })
+
+        return image, labels
 
 
     def load_images(self, files):
@@ -78,10 +129,11 @@ class OCTDataset(Dataset):
         return len(self.raw_images)
         
     def __getitem__(self, index: int) -> dict:
+        image, labels = self.augment(index)
 
         sample = {
-            "image": self.raw_images[index],
-            "labels": self.raw_segmentation_labels[index],
+            "image": image,
+            "labels": labels,
             "metadata": self.metadata[index]
         }
 

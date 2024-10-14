@@ -1,58 +1,78 @@
 from data import OCTDataset
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
-from torchsummary import summary
+# import matplotlib.pyplot as plt
+# from torchsummary import summary
 from pathlib import Path
 import torch
 from tqdm import tqdm
 import numpy as np
 import argparse
+from torch.autograd import Variable
+import sklearn.metrics as skl_metrics
 
 from model2 import U_Net
-from model import Model
+from constants import CLASSES
+from utils import plot_labels, plot_image, plot_image_overlay_labels
+# from model import Model
 
 
-# def dice_loss(input, target): #TODO: is this multiclass??
-#     """Function to compute dice loss
-#     source: https://github.com/pytorch/pytorch/issues/1249#issuecomment-305088398
+def dice_loss(input, target): #TODO: is this multiclass??
+    """Function to compute dice loss
+    source: https://github.com/pytorch/pytorch/issues/1249#issuecomment-305088398
 
-#     Args:
-#         input (torch.Tensor): predictions
-#         target (torch.Tensor): ground truth mask
-
-#     Returns:
-#         dice loss: 1 - dice coefficient
-#     """
-#     smooth = 1.0
-
-#     iflat = input.view(-1, 64**3)
-#     tflat = target.view(-1, 64**3)
-#     intersection = (iflat * tflat).sum(dim=1)
-
-#     return (
-#         1
-#         - (
-#             (2.0 * intersection + smooth)
-#             / (iflat.sum(dim=1) + tflat.sum(dim=1) + smooth)
-#         ).mean()
-#     )
-
-def dice_loss(prediction, target):
-    """Calculating the dice loss
     Args:
-        prediction = predicted image
-        target = Targeted image
-    Output:
-        dice_loss"""
+        input (torch.Tensor): predictions
+        target (torch.Tensor): ground truth mask
 
+    Returns:
+        dice loss: 1 - dice coefficient
+    """
     smooth = 1.0
 
-    i_flat = prediction.view(-1)
-    t_flat = target.view(-1)
+    eps = 0.0001
+    iflat = input.view(-1, 704**2)
+    tflat = target.view(-1, 704**2)
+    intersection = (iflat * tflat).sum(dim=1)
 
-    intersection = (i_flat * t_flat).sum()
+    dice = np.zeros(CLASSES-1)
+    for c in range(1, CLASSES):   # assumes background is first class and doesn't compute its score
+        iflat_ = iflat==c
+        tflat_ = tflat==c
+        intersection = (iflat_ * tflat_).sum()
+        union = iflat_.sum(dim=1) + tflat_.sum(dim=1)
+        d = ((2.0 * intersection + eps) / (union + eps)).mean()
+        # print(d)
+        dice[c-1] += d
 
-    return 1 - ((2. * intersection + smooth) / (i_flat.sum() + t_flat.sum() + smooth))
+
+    # print(intersection)
+    # print(iflat.shape)
+    # dice =  (
+    #     1
+    #     - (
+    #         (2.0 * intersection + smooth)
+    #         / (iflat.sum(dim=1) + tflat.sum(dim=1) + smooth)
+    #     )
+    # )
+    # print(dice.mean())
+    return torch.Tensor([1-dice.mean()])
+
+# def dice_loss(prediction, target):
+#     """Calculating the dice loss
+#     Args:
+#         prediction = predicted image
+#         target = Targeted image
+#     Output:
+#         dice_loss"""
+
+#     smooth = 1.0
+
+#     i_flat = prediction.reshape(-1)
+#     t_flat = target.reshape(-1)
+
+#     intersection = (i_flat * t_flat).sum()
+
+#     return 1 - ((2. * intersection + smooth) / (i_flat.sum() + t_flat.sum() + smooth))
 
 
 
@@ -62,10 +82,11 @@ class Trainer:
         data_dir: Path,
         save_dir: Path,
         epochs: int = 100,
-        batch_size: int = 8,
-        dropout: float = 0.0,
+        batch_size: int = 4,
+        dropout: float = 0.1,
         learning_rate: float = 1e-4,
         weight_decay: float = 0.0,
+        
     ):
         self.data_dir = data_dir
         self.save_dir = save_dir
@@ -81,39 +102,43 @@ class Trainer:
 
         self.device = torch.device("cuda:0" if train_on_gpu else "cpu")
 
-        self.model = U_Net(dropout=dropout).to(self.device)
+        self.model = U_Net(dropout=dropout)#.to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=learning_rate,
             weight_decay=weight_decay,
         )
         
-        dataset_train = OCTDataset()
-        dataset_val = OCTDataset(validation=True)
+        dataset_train = OCTDataset(aug_rotations=180, aug_flip_chance=0.5,)
+        dataset_val = OCTDataset(validation=True, aug_rotations=180, aug_flip_chance=0.5,)
 
-        dataloader_train = DataLoader(
+        self.dataloader_train = DataLoader(
             dataset=dataset_train,
-            batch_size=1,
+            batch_size=self.batch_size,
         )
 
-        dataloader_val = DataLoader(
+        self.dataloader_val = DataLoader(
             dataset=dataset_val,
-            batch_size=1,
+            batch_size=self.batch_size,
         )
 
 
 
     def call_model(self, batch: dict):
-        images = batch["image"].swapaxes(2,3).swapaxes(1,2).to(self.device) # need to swap axes to put color channels at the front
-        labels = batch["labels"].to(self.device)
+        images = batch["image"]#.swapaxes(2,3).swapaxes(1,2)#.to(self.device) # need to swap axes to put color channels at the front
+        labels = batch["labels"]#.to(self.device)
 
-        outputs = self.model(images)
+        outputs = self.model(images).argmax(dim=1)
         # TODO: outputs should be argmaxed to get the labels i think.
+        # print(outputs.shape, labels.shape)
         losses = dice_loss(outputs, labels)
+        #torch.nn.functional.cross_entropy(predictions, labels)
 
         outputs = outputs.detach().cpu().numpy()
-        labels = [batch_labels.cpu() for batch_labels in labels.items()]
+        labels = labels.detach().cpu().numpy()
+        # labels = [batch_labels.cpu() for batch_labels in labels.items()]
 
+        # print(losses)
         return outputs, labels, losses
     
 
@@ -129,19 +154,31 @@ class Trainer:
             batch_predictions, batch_labels, batch_loss = self.call_model(batch)
 
             # Store the predictions, labels and losses to later aggregate them.
-            for value in batch_loss.items():
-                losses.append(value.item())
-            for value in batch_predictions.items():
-                predictions.extend(value)
-            for value in batch_labels.items():
-                labels.extend(value)
+            # print(batch_loss, batch_loss[0].item())
+            losses.append(batch_loss[0].item())
+            predictions.append(batch_predictions)
+            labels.append(batch_labels.squeeze())
+
+            # temporary printing to see output and labels of model during training
+            # for i, prediction in enumerate(batch_predictions):
+            #         plot_image_overlay_labels(batch["image"][i].detach().cpu().numpy(), batch_labels[i], f"overlay_train_while_training_{i}")
+            #         plot_image_overlay_labels(batch["image"][i].detach().cpu().numpy(), batch_predictions[i], f"overlay_prediction_train_while_training_{i}")
+
+            batch_loss = Variable(batch_loss.data, requires_grad=True) # need this to set requires_grad to true
 
             batch_loss.backward()
             self.optimizer.step()
 
         self.optimizer.zero_grad()
         loss = np.mean(losses)
-        return loss
+        BCELoss = torch.nn.BCEWithLogitsLoss()
+
+        metrics = {
+            # "auc": np.mean([[skl_metrics.roc_auc_score(label.ravel(), prediction.ravel(), multi_class='ovo') for label, prediction in zip(batch_label, batch_prediction)] for batch_label, batch_prediction in zip(labels, predictions)]), # mean over all auc scores per sample
+            "dice": 1 - loss,
+        }
+
+        return metrics
 
 
     def validation(self):
@@ -151,21 +188,28 @@ class Trainer:
         labels = []
 
         with torch.no_grad():
-            for batch in tqdm(self.dataloader_valid, desc="Validation"):
+            for batch in tqdm(self.dataloader_val, desc="Validation"):
                 batch_predictions, batch_labels, batch_loss = self.call_model(batch)
 
                 # Store the predictions, labels and losses to later aggregate them.
-                for value in batch_loss.items():
-                    losses.append(value.item())
-                for value in batch_predictions.items():
-                    predictions.extend(value)
-                for value in batch_labels.items():
-                    labels.extend(value)
+                losses.append(batch_loss[0].item())
+                predictions.append(batch_predictions)
+                labels.append(batch_labels)
+
+                # temporary printing to see output and labels of model during training
+                # for i, prediction in enumerate(batch_predictions):
+                #     plot_image_overlay_labels(batch["image"][i].detach().cpu().numpy(), batch_labels[i], f"overlay_val_while_training_{i}")
+                #     plot_image_overlay_labels(batch["image"][i].detach().cpu().numpy(), batch_predictions[i], f"overlay_prediction_val_while_training_{i}")
 
         self.optimizer.zero_grad()
         loss = np.mean(losses)
 
-        return loss
+        metrics = {
+            # "auc": np.mean([skl_metrics.roc_auc_score(label.ravel(), prediction.ravel(), multi_class='ovo') for label, prediction in zip(labels, predictions)]),
+            "dice": 1 - loss,
+        }
+
+        return metrics
     
     
     
@@ -187,9 +231,9 @@ class Trainer:
 
             print(epoch_valid_metrics)
 
-            if epoch_valid_metrics["overall"] > best_metric:
+            if epoch_valid_metrics["dice"] > best_metric:
                 print("\n===== Saving best model! =====\n")
-                best_metric = epoch_valid_metrics["overall"]
+                best_metric = epoch_valid_metrics["dice"]
                 best_epoch = epoch
 
                 torch.save(self.model.state_dict(), self.save_dir / "best_model.pth")
@@ -205,8 +249,8 @@ class Trainer:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, help='path to the directory that contains the data')
-    parser.add_argument("--save_dir", type=str, help='path to the directory that you want to save in')
+    parser.add_argument("--data_dir", type=str, default="./data", help='path to the directory that contains the data')
+    parser.add_argument("--save_dir", type=str, default="./saved", help='path to the directory that you want to save in')
 
     args = parser.parse_args()
     data_dir = Path(args.data_dir)
@@ -216,8 +260,8 @@ def main():
         data_dir=data_dir,
         save_dir=save_dir,
         epochs=2,
-        batch_size=16,
-        dropout=None,
+        batch_size=4,
+        dropout=0.1,
         learning_rate=1e-4,
         weight_decay=0.0
     )

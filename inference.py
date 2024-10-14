@@ -9,6 +9,7 @@ from tqdm import tqdm
 import argparse
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+from collections import Counter
 
 from data import OCTDataset
 from model2 import U_Net
@@ -103,7 +104,9 @@ def inference(
         plot_image(outputs[0])
 
         plot_uncertainty_per_class(outputs)
-        
+        # unique, counts = np.unique(labels, return_counts=True)
+        # print("counter: ", dict(zip(unique, counts)))
+
         plot_labels(labels)
 
         plot_image_overlay_labels(sample["image"].detach().cpu().numpy().squeeze(), labels)

@@ -85,12 +85,18 @@ def plot_labels(labels, file_name = "labels"):
 
     plt.axis("off")
     plt.title("labels")
+    plt.colorbar()
     plt.savefig(file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
 
 
 def plot_image_overlay_labels(image, labels, file_name = "image_overlay_labels", alpha=0.5):
     norm, mycmap = create_color_map()
     fig = plt.figure(figsize=(6,6))
+    # print(image.shape)
+
+    if image.shape[0] == 3:
+        image = image.transpose(1,2,0)
+
 
     plt.imshow(image)
     plt.imshow(labels.reshape((704,704,1)), cmap=mycmap, norm=norm, alpha=alpha)
