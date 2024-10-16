@@ -12,7 +12,7 @@ import sklearn.metrics as skl_metrics
 
 from model2 import U_Net
 from constants import CLASSES
-from utils import plot_labels, plot_image, plot_image_overlay_labels
+from utils import plot_labels, plot_image, plot_image_overlay_labels, make_train_val_split
 # from model import Model
 
 
@@ -27,7 +27,8 @@ def dice_loss(input, target): #TODO: is this multiclass??
     Returns:
         dice loss: 1 - dice coefficient
     """
-    smooth = 1.0
+
+    
 
     eps = 0.0001
     iflat = input.view(-1, 704**2)
@@ -35,45 +36,18 @@ def dice_loss(input, target): #TODO: is this multiclass??
     intersection = (iflat * tflat).sum(dim=1)
 
     dice = np.zeros(CLASSES-1)
-    for c in range(1, CLASSES):   # assumes background is first class and doesn't compute its score
+    # calculate dice for each class except 0, since that is background
+    for c in range(1, CLASSES):
         iflat_ = iflat==c
         tflat_ = tflat==c
         intersection = (iflat_ * tflat_).sum()
         union = iflat_.sum(dim=1) + tflat_.sum(dim=1)
         d = ((2.0 * intersection + eps) / (union + eps)).mean()
-        # print(d)
         dice[c-1] += d
 
+    print(f"INFO DICE: input shape: {input.shape}, target shape: {target.shape}, intersection: {intersection}, dice per class: {dice}")
 
-    # print(intersection)
-    # print(iflat.shape)
-    # dice =  (
-    #     1
-    #     - (
-    #         (2.0 * intersection + smooth)
-    #         / (iflat.sum(dim=1) + tflat.sum(dim=1) + smooth)
-    #     )
-    # )
-    # print(dice.mean())
     return torch.Tensor([1-dice.mean()])
-
-# def dice_loss(prediction, target):
-#     """Calculating the dice loss
-#     Args:
-#         prediction = predicted image
-#         target = Targeted image
-#     Output:
-#         dice_loss"""
-
-#     smooth = 1.0
-
-#     i_flat = prediction.reshape(-1)
-#     t_flat = target.reshape(-1)
-
-#     intersection = (i_flat * t_flat).sum()
-
-#     return 1 - ((2. * intersection + smooth) / (i_flat.sum() + t_flat.sum() + smooth))
-
 
 
 class Trainer:
@@ -86,8 +60,8 @@ class Trainer:
         dropout: float = 0.1,
         learning_rate: float = 1e-4,
         weight_decay: float = 0.0,
-        
     ):
+        
         self.data_dir = data_dir
         self.save_dir = save_dir
         self.epochs = epochs
@@ -102,15 +76,24 @@ class Trainer:
 
         self.device = torch.device("cuda:0" if train_on_gpu else "cpu")
 
+        # initialise model
         self.model = U_Net(dropout=dropout)#.to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=learning_rate,
             weight_decay=weight_decay,
         )
+
+        # check if val split has been made
+        val_empty = not any((self.data_dir / "val" / "labels").iterdir())
+        if val_empty:
+            print("INFO: did not find validation split, making one")
+            make_train_val_split(data_dir)
         
-        dataset_train = OCTDataset(aug_rotations=180, aug_flip_chance=0.5,)
-        dataset_val = OCTDataset(validation=True, aug_rotations=180, aug_flip_chance=0.5,)
+        # create datasets and dataloaders
+        print("INFO: loading data")
+        dataset_train = OCTDataset(data_dir=self.data_dir ,aug_rotations=180, aug_flip_chance=0.5,)
+        dataset_val = OCTDataset(data_dir=self.data_dir, validation=True, aug_rotations=180, aug_flip_chance=0.5,)
 
         self.dataloader_train = DataLoader(
             dataset=dataset_train,
@@ -123,7 +106,6 @@ class Trainer:
         )
 
 
-
     def call_model(self, batch: dict):
         images = batch["image"]#.swapaxes(2,3).swapaxes(1,2)#.to(self.device) # need to swap axes to put color channels at the front
         labels = batch["labels"]#.to(self.device)
@@ -132,6 +114,7 @@ class Trainer:
         # TODO: outputs should be argmaxed to get the labels i think.
         # print(outputs.shape, labels.shape)
         losses = dice_loss(outputs, labels)
+        print("INFO LOSSES: ", outputs.shape, labels.shape, losses)
         #torch.nn.functional.cross_entropy(predictions, labels)
 
         outputs = outputs.detach().cpu().numpy()
@@ -249,20 +232,21 @@ class Trainer:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./data", help='path to the directory that contains the data')
-    parser.add_argument("--save_dir", type=str, default="./saved", help='path to the directory that you want to save in')
+    parser.add_argument("--data_dir", type=str, default="/data/diag/leahheil/data", help='path to the directory that contains the data')
+    parser.add_argument("--save_dir", type=str, default="/data/diag/leahheil/saved", help='path to the directory that you want to save in')
+    parser.add_argument("--epochs", type=int, default=20, help='number of epochs to run')
+    parser.add_argument("--learning_rate", type=float, default=1e-4, help='initial learning rate')
+    parser.add_argument("--dropout", type=float, default=0.2, help='dropout rate')
 
     args = parser.parse_args()
-    data_dir = Path(args.data_dir)
-    save_dir = Path(args.save_dir)
 
     trainer = Trainer(
-        data_dir=data_dir,
-        save_dir=save_dir,
-        epochs=2,
-        batch_size=4,
-        dropout=0.1,
-        learning_rate=1e-4,
+        data_dir=Path(args.data_dir),
+        save_dir=Path(args.save_dir),
+        epochs=args.epochs,
+        batch_size=16,
+        dropout=args.dropout,
+        learning_rate=args.learning_rate,
         weight_decay=0.0
     )
     trainer.train()

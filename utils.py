@@ -13,25 +13,32 @@ def make_train_val_split(data_dir):
     #get all files and file names, find unique patients
     files = [file for file in list((data_dir / "train" / "labels").glob('./*')) if file != Path('data/train/labels/.DS_Store')]
     file_names = [str(file).split("/")[-1] for file in files]
-    patients = ["_".join(file.split("_")[:3]) for file in file_names] #TODO: temp :3 for testing purposes
+    patients = ["_".join(file.split("_")[:2]) for file in file_names] #TODO: temp :3 for testing purposes
     patients = list(set(patients)) #converting to set and back to list gets unique items
+    print(f"INFO: patients found: {patients}")
+    print(f"INFO: total of {len(patients)} patients found")
 
     # split up files
     train_patients, val_patients = train_test_split(patients, test_size=0.2, random_state=STATE)
+    print(f"INFO: moving {len(val_patients)} patients to val")
 
     for patient in val_patients:
         # get file name and file itself for the labels of a patient
-        label_file_name = str(list((data_dir / "train" / "labels").glob(f"{patient}*"))[0]).split("/")[-1]
-        label_file = Path(data_dir / "train" / "labels" / label_file_name)
-        label_file.rename(data_dir / "val" / "labels" / label_file_name)
+        label_file_names = [str(file).split("/")[-1] for file in list((data_dir / "train" / "labels").glob(f"./*{patient}*"))]
+        print(f"INFO: {len(label_file_names)} label files: ", label_file_names)
+        for label_file_name in label_file_names:
+            label_file = Path(data_dir / "train" / "labels" / label_file_name)
+            label_file.rename(data_dir / "val" / "labels" / label_file_name)
+            # print(f"INFO: moved labels for patient {label_file_name} to val")
 
         # get image files of the same patient
         patient_images = list((data_dir / "train" / "images").glob(f"{patient}*"))
-
+        print(f"INFO: {len(patient_images)} image files: ", patient_images)
         # move all image files to validation
         for image_file in patient_images:
             image_file_name = str(image_file).split("/")[-1]
             image_file.rename(data_dir / "val" / "images" / image_file_name)
+            # print(f"INFO: moved image for patient {image_file_name} to val")
 
 
 def hex_to_rgb(hex: str):
@@ -54,7 +61,7 @@ def create_color_map():
     return norm, cmap
 
 
-def plot_uncertainty_per_class(prediction, file_name="uncertainties_per_class"):
+def plot_uncertainty_per_class(prediction, file_path, file_name="uncertainties_per_class"):
     pred_proba = np.mean(prediction, axis=0)
 
     fig, ax = plt.subplots(nrows=3, ncols=5, figsize=(15,9))
@@ -64,20 +71,20 @@ def plot_uncertainty_per_class(prediction, file_name="uncertainties_per_class"):
         ax[int(i/5), i%5].set_yticks([])
         ax[int(i/5), i%5].set_title(f"{CLASS_DICT[i]}")
     plt.title("Uncertainty maps per class")
-    plt.savefig(file_name + ".png")
+    plt.savefig(file_path + file_name + ".png")
 
 
-def plot_image(prediction, file_name="output_per_class"):
+def plot_image(prediction, file_path, file_name="output_per_class"):
     fig, ax = plt.subplots(nrows=3, ncols=5, figsize=(15,9))
     for i in range(prediction.shape[0]):
         ax[int(i/5), i%5].imshow(prediction[i], cmap='viridis')
         ax[int(i/5), i%5].set_xticks([])
         ax[int(i/5), i%5].set_yticks([])
         ax[int(i/5), i%5].set_title(f"{CLASS_DICT[i]}")
-    plt.savefig(file_name + ".png")
+    plt.savefig(file_path + file_name + ".png")
 
 
-def plot_labels(labels, file_name = "labels"):
+def plot_labels(labels, file_path, file_name = "labels"):
     norm, mycmap = create_color_map()
     fig = plt.figure(figsize=(6,6))
 
@@ -86,10 +93,10 @@ def plot_labels(labels, file_name = "labels"):
     plt.axis("off")
     plt.title("labels")
     plt.colorbar()
-    plt.savefig(file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    plt.savefig(file_path + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
 
 
-def plot_image_overlay_labels(image, labels, file_name = "image_overlay_labels", alpha=0.5):
+def plot_image_overlay_labels(image, labels, file_path, file_name = "image_overlay_labels", alpha=0.5):
     norm, mycmap = create_color_map()
     fig = plt.figure(figsize=(6,6))
     # print(image.shape)
@@ -103,4 +110,4 @@ def plot_image_overlay_labels(image, labels, file_name = "image_overlay_labels",
 
     plt.axis("off")
     plt.title("image overlayed with label")
-    plt.savefig(file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    plt.savefig(file_path + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes

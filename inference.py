@@ -143,8 +143,8 @@ def inference(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./data/val", help='path to the directory that contains the data')
-    parser.add_argument("--save_dir", type=str, default="./data", help='path to the directory that you want to save in')
+    parser.add_argument("--data_dir", type=str, default="/data/diag/leahheil/data/val", help='path to the directory that contains the data')
+    parser.add_argument("--save_dir", type=str, default="/data/diag/leahheil/saved/inference", help='path to the directory that you want to save in')
 
     args = parser.parse_args()
     data_dir = Path(args.data_dir)

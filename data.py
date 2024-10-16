@@ -100,7 +100,7 @@ class OCTDataset(Dataset):
             image = np.zeros((INPUT_SIZE[0], INPUT_SIZE[1], CHANNELS))
             for channel in range(CHANNELS):
                 img = sitk.ReadImage(
-                        self.data_dir / "images" / f"{file_base}_00{channel+12}.nii.gz" #TODO: remove the +12, this is just for testing one image
+                        self.data_dir / "images" / f"{file_base}_000{channel}.nii.gz"
                     )
                 color_channel = sitk.GetArrayFromImage(img).squeeze() / 255.0
                 image[:,:,channel] = color_channel
