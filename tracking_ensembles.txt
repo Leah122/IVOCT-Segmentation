@@ -1,0 +1,48 @@
+
+
+
+0: 0.6031869602203369
+1: 0.5956252241456831
+2: 0.6191849104667965
+3: 0.5746145395585048
+4: 0.624666068289015
+
+5 ensemble models: 0.651808
+
+
+109120: normal model id 1
+109197: normal model id 2 with softmax this time (epoch 14 dice: 0.522184752387765 (0.9392056  0.93638533  0.8184965  0.68118834  0.20653223  0.0909103  0.414609  0.98092777  0.09846397  0.055128362))
+
+109210 is training normal model id 3 with softmax and different weights (0.5298298994700114, 0.48 without background)
+109212 is training normal model id 4 with softmax and more exagerated weights (0.5540217415050224, 0.506 without background)
+
+
+
+0-3 all has +0.5 for lipid and calcium, 4 does not, 5-6 has +1 for lipid and calcium
+0: 0.57878 (112595)
+1: 0.57656 (112594)
+2: 0.56764 (112594)
+3: 0.58686 (112595)
+4: 0.57425 (112824)
+
+
+per class:
+avg dice uncertain images:  0.4963338509359992  /  0.7002207666827551
+avg dice uncertain images (certain pixels):  0.58401847  /  0.7984117
+avg dice uncertain images (uncertain pixels):  0.21771029  /  0.36804414
+avg nr of structures:  6.8  /  7.04
+
+normalised per class:
+avg dice uncertain images:  0.7783941586150479  /  0.7002207666827551
+avg dice uncertain images (certain pixels):  0.84904015  /  0.7984117
+avg dice uncertain images (uncertain pixels):  0.40116614  /  0.36804414
+avg nr of structures:  7.2  /  7.04
+
+not per class:
+avg dice uncertain images:  0.4963338509359992  /  0.7002207666827551
+avg dice uncertain images (certain pixels):  0.58401847  /  0.7984117
+avg dice uncertain images (uncertain pixels):  0.21771029  /  0.36804414
+avg nr of structures:  6.8  /  7.04
+
+
+

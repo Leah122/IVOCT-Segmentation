@@ -5,6 +5,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 import argparse
+import gc
 
 from model2 import U_Net
 from constants import NEW_CLASS_DICT
@@ -17,6 +18,7 @@ class Trainer:
         data_dir: Path,
         save_dir: Path,
         job_id: str,
+        ensemble_id: int,
         epochs: int = 100,
         batch_size: int = 4,
         dropout: float = 0.1,
@@ -40,6 +42,7 @@ class Trainer:
         self.dice_weight = dice_weight
         self.class_weight_power = class_weight_power
         self.job_id = job_id
+        self.ensemble_id = ensemble_id
 
         train_on_gpu = torch.cuda.is_available()
 
@@ -55,7 +58,6 @@ class Trainer:
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.learning_rate,
-            #weight_decay=self.weight_decay,
         )
 
         self.scheduler = torch.optim.lr_scheduler.PolynomialLR(self.optimizer, total_iters=self.epochs, power=self.weight_decay)
@@ -87,7 +89,6 @@ class Trainer:
             batch_size=self.batch_size,
         )
 
-
     def call_model(self, batch: dict):
         images = batch["image"].to(self.device)
         labels = batch["labels"].to(self.device)
@@ -96,8 +97,8 @@ class Trainer:
 
         # add extra importance to lipid and calcium (4,5)
         weights = np.array(self.dataset_train.class_weights)
-        weights[4] += 0.5
-        weights[5] += 0.5
+        weights[4] += 1
+        weights[5] += 1
 
         class_weights = torch.tensor(weights).to(self.device).type(torch.cuda.FloatTensor)
         cross_entropy_func = torch.nn.CrossEntropyLoss(weight=class_weights) 
@@ -204,9 +205,8 @@ class Trainer:
 
         return epoch_metrics
     
-
     def print_run_info(self):
-        print("\n========== Run Info ==========\n")
+        print(f"\n========== Run Info (model {self.ensemble_id}) ==========\n")
         print(f"job id: {self.job_id}")
         print(f"learning rate: {self.learning_rate}")
         print(f"weight decay: {self.weight_decay}")
@@ -226,16 +226,16 @@ class Trainer:
         print(f"dice: {metrics['dice']}")
         print(f"dice per class: {'  '.join([str(x) for x in metrics['dice_per_class']])}")
     
-
+    
     def train(self):
         metrics = {"train": [], "valid": []}
         best_metric = 0
         best_epoch = 0
 
         self.print_run_info()
-        print("\n========== Class weights ==========\n")
-        for i in range(len(NEW_CLASS_DICT)):
-            print(f"{NEW_CLASS_DICT[i]}: {self.dataset_train.class_weights[i]}")
+        # print("\n========== Class weights ==========\n")
+        # for i in range(len(NEW_CLASS_DICT)):
+        #     print(f"{NEW_CLASS_DICT[i]}: {self.dataset_train.class_weights[i]}")
 
         epoch_valid_metrics = self.validation()
 
@@ -243,7 +243,7 @@ class Trainer:
         self.print_metrics(epoch_valid_metrics)
 
         for epoch in range(self.epochs):
-            print(f"\n\n========== Epoch {epoch + 1} / {self.epochs} ==========\n ")
+            print(f"\n\n========== Epoch {epoch + 1} / {self.epochs} (model {self.ensemble_id}) ==========\n ")
             print(f"learning rate: {self.optimizer.param_groups[0]['lr']}")
 
             epoch_train_metrics = self.train_epoch()
@@ -269,6 +269,7 @@ class Trainer:
 
             np.save(self.save_dir / f"metrics_{self.job_id}.npy", metrics)
             torch.save(self.model.state_dict(), self.save_dir / f"last_model_{self.job_id}.pth")
+            gc.collect()
 
         self.print_run_info()
         print(f"best validation dice: {best_metric}")
@@ -276,12 +277,16 @@ class Trainer:
         #plot metrics
         plot_metrics(metrics, ["dice_loss", "cross_entropy"], file_path=str(self.save_dir), file_name="metrics_plot")
 
+        self.model.cpu()
+
+        return best_metric
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="/data/diag/leahheil/data", help='path to the directory that contains the data')
-    parser.add_argument("--save_dir", type=str, default="/data/diag/leahheil/saved", help='path to the directory that you want to save in')
-    parser.add_argument("--epochs", type=int, default=100, help='number of epochs to run')
+    parser.add_argument("--save_dir", type=str, default="/data/diag/leahheil/saved/ensemble", help='path to the directory that you want to save in')
+    parser.add_argument("--epochs", type=int, default=80, help='number of epochs to run')
     parser.add_argument("--learning_rate", type=float, default=5e-2, help='initial learning rate')
     parser.add_argument("--dropout", type=float, default=0.3)
     parser.add_argument("--batch_size", type=int, default=8)
@@ -289,24 +294,32 @@ def main():
     parser.add_argument("--class_weight_power", type=float, default=4.0, help='the square used to recalculate the class weights')
     parser.add_argument("--dice_weight", type=int, default=2, help='weight added to the dice score')
     parser.add_argument("--job_id", type=str, default="1", help='id to add to the job when running multiple')
+    parser.add_argument("--ensemble_ids", type=str, default="0,1,2,3,4")
 
     args = parser.parse_args()
 
-    trainer = Trainer(
-        data_dir=Path(args.data_dir),
-        save_dir=Path(args.save_dir),
-        job_id=args.job_id,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        dropout=args.dropout,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        class_weight_power=args.class_weight_power,
-        dice_weight=args.dice_weight
-    )
-    trainer.train()
+    best_metrics = []
+
+    print(f"\n========== Training models: {args.ensemble_ids} ==========\n")
+    for id in args.ensemble_ids.split(","):
+        trainer = Trainer(
+            data_dir=Path(args.data_dir),
+            save_dir=Path(args.save_dir + f"/model_{id}"),
+            job_id=args.job_id,
+            ensemble_id=id,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            dropout=args.dropout,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            class_weight_power=args.class_weight_power,
+            dice_weight=args.dice_weight,
+        )
+        best_metrics.append(trainer.train())
+        del trainer
+    
+    for i, metrics in enumerate(best_metrics):
+        print(i, metrics)
 
 if __name__ == "__main__":
     main()
-
-
