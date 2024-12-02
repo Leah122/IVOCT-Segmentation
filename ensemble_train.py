@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import argparse
 import gc
+import json
 
 from model2 import U_Net
 from constants import NEW_CLASS_DICT
@@ -26,6 +27,7 @@ class Trainer:
         weight_decay: float = 0.0,
         class_weight_power: float = 0.5,
         dice_weight: int = 2,
+        lipid_calcium_weight: float = 0.0
     ):
         
         self.data_dir = data_dir
@@ -43,6 +45,7 @@ class Trainer:
         self.class_weight_power = class_weight_power
         self.job_id = job_id
         self.ensemble_id = ensemble_id
+        self.lipid_calcium_weight = lipid_calcium_weight
 
         train_on_gpu = torch.cuda.is_available()
 
@@ -97,8 +100,8 @@ class Trainer:
 
         # add extra importance to lipid and calcium (4,5)
         weights = np.array(self.dataset_train.class_weights)
-        weights[4] += 1
-        weights[5] += 1
+        weights[4] += self.lipid_calcium_weight
+        weights[5] += self.lipid_calcium_weight
 
         class_weights = torch.tensor(weights).to(self.device).type(torch.cuda.FloatTensor)
         cross_entropy_func = torch.nn.CrossEntropyLoss(weight=class_weights) 
@@ -293,10 +296,14 @@ def main():
     parser.add_argument("--weight_decay", type=float, default=0.9)
     parser.add_argument("--class_weight_power", type=float, default=4.0, help='the square used to recalculate the class weights')
     parser.add_argument("--dice_weight", type=int, default=2, help='weight added to the dice score')
+    parser.add_argument("--lipid_calcium_weight", type=float, default=0.0, help='float value to add to lipid and calcium')
     parser.add_argument("--job_id", type=str, default="1", help='id to add to the job when running multiple')
     parser.add_argument("--ensemble_ids", type=str, default="0,1,2,3,4")
 
     args = parser.parse_args()
+
+    with open(f'/data/diag/leahheil/IVOCT-Segmentation/ensemble_config.json', 'r') as file:
+        config = json.load(file)
 
     best_metrics = []
 
@@ -309,11 +316,12 @@ def main():
             ensemble_id=id,
             epochs=args.epochs,
             batch_size=args.batch_size,
-            dropout=args.dropout,
+            dropout=config[str(id)]["dropout"],
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
-            class_weight_power=args.class_weight_power,
-            dice_weight=args.dice_weight,
+            class_weight_power=config[str(id)]["class_weight_power"],
+            dice_weight=config[str(id)]["dice_weight"],
+            lipid_calcium_weight=config[str(id)]["lipid_calcium_weight"],
         )
         best_metrics.append(trainer.train())
         del trainer

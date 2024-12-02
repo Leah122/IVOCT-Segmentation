@@ -11,7 +11,7 @@ torch.manual_seed(17)
 import random
 from tqdm import tqdm
 
-from constants import INPUT_SIZE, CHANNELS, NEW_CLASSES
+from constants import INPUT_SIZE, CHANNELS, NEW_CLASSES, UNCERTAIN
 
 class OCTDataset(Dataset):
     def __init__(
@@ -19,12 +19,14 @@ class OCTDataset(Dataset):
         data_dir: Path = Path('./data'),
         validation: bool = False,
         test: bool = False,
+        polish: bool = False,
         aug_rotations: int = 0,
         aug_flip_chance: float = 0,
         aug_color_chance: float = 0,
         aug_gaussian_sigma: float = 0,
         class_weight_power: float = 2.0,
         debugging: bool = False,
+        uncertain: bool = False,
     ): 
         
         self.validation = validation
@@ -35,20 +37,33 @@ class OCTDataset(Dataset):
         self.aug_gaussian_sigma = aug_gaussian_sigma
         self.class_weight_power = class_weight_power
         self.debugging = debugging
+        self.polish = polish
+        self.uncertain = uncertain
 
         # set data directory depending on data split
         if self.test:
             self.data_dir = data_dir / "test" 
         elif self.validation:
             self.data_dir = data_dir / "val" 
+        elif self.polish:
+            self.data_dir = data_dir / "polish" 
         else:
             self.data_dir = data_dir / "train"
 
         # get label files from the data directory
         self.files = [file for file in list((self.data_dir / "labels").glob('./*')) if file != (self.data_dir / "labels" / ".DS_Store")]
         
+        if self.polish: # polish data has no labels, so we get the file names directly from the images
+            self.files = [file for file in list((self.data_dir / "images").glob('./*')) if file != (self.data_dir / "images" / ".DS_Store")]
+            self.files = ["_".join(str(file).split("_")[:-1])+".nii.gz" for file in self.files]
+            self.files = list(set(self.files))
+
+
         if self.debugging:
             self.files = self.files[:50]
+        if self.uncertain:
+            self.files = [file for file in self.files if any(frame in str(file) for frame in UNCERTAIN)]
+            print(self.files)
 
         self.size = len(self.files)
         
@@ -63,22 +78,11 @@ class OCTDataset(Dataset):
         labels[labels == 14] = 3
         labels[labels == 13] = 9
         return labels
-        # for i in range(labels.shape[0]):
-        #     for j in range(labels.shape[1]):
-        #         if labels[i][j] == 9 or labels[i][j] == 10 or labels[i][j] == 12:
-        #             labels[i][j] = 1 # red/white thrombus and rupture to lumen
-        #         elif labels[i][j] == 11 or labels[i][j] == 14: 
-        #             labels[i][j] = 3 # disection or neovascularisation to intima
-        #         elif labels[i][j] == 13: 
-        #             labels[i][j] = 9 # label for healed plaque becomes 9
-        # return labels
+
 
     def augment(self, index):
         image = torch.Tensor(self.raw_images[index]).permute(2,0,1)
         labels = torch.Tensor(self.raw_segmentation_labels[index].reshape((1,704,704)))
-
-        #TODO: possible additions: ColorJitter, RandomAdjustSharpness
-        #TODO: check if v2 is available on the cluster
         
         hflip = False
         vflip = False
@@ -135,19 +139,16 @@ class OCTDataset(Dataset):
                 color_channel = sitk.GetArrayFromImage(img).squeeze() / 255.0
                 image[:,:,channel] = color_channel
             
-            # plt.imsave(f"train_{file_base}.jpg", image)
-
-            segmentation = sitk.ReadImage(
-                    self.data_dir / "labels" / f"{file_base}.nii.gz"
-                )
+            if not self.polish: # polish data does not have segmentations
+                segmentation = sitk.ReadImage(
+                        self.data_dir / "labels" / f"{file_base}.nii.gz"
+                    )
             
-            # plt.imsave(f"train_{file_base}_labels.jpg", sitk.GetArrayFromImage(segmentation).squeeze())
-            
-            labels = sitk.GetArrayFromImage(segmentation).squeeze()
-            labels = self.preprocess_labels(labels)
+                labels = sitk.GetArrayFromImage(segmentation).squeeze()
+                labels = self.preprocess_labels(labels)
+                self.raw_segmentation_labels[i] = labels
 
             self.raw_images[i] = image
-            self.raw_segmentation_labels[i] = labels
             self.metadata.append({
                 "file_name": str(file_base),
                 # "origin": np.flip(image.GetOrigin()),

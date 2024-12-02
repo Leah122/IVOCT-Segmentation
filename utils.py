@@ -21,8 +21,8 @@ def dice_score(input, target): #TODO: is this multiclass??
         iflat_ = iflat==c
         tflat_ = tflat==c
         intersection = (iflat_ * tflat_).sum()
-        union = iflat_.sum() + tflat_.sum() # removed dim=1
-        if union == 0:
+        union = iflat_.sum() + tflat_.sum()
+        if union == 0 and intersection == 0:
             dice_per_class[c] = np.nan
         else: 
             d = ((2.0 * intersection + eps) / (union + eps)).mean()
@@ -119,46 +119,72 @@ def create_color_map():
 def plot_softmax_labels_per_class(prediction, file_path = ".", file_name="uncertainties_per_class"):
     pred_proba = np.mean(prediction, axis=0)
 
-    fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(6,6))
+    rows = 2
+    cols = 5
+
+    fig, ax = plt.subplots(nrows=rows, ncols=cols, figsize=(cols*2,rows*2))
     for i, image in enumerate(pred_proba[1:]):
         # create color map
         color = [tuple((0,0,0)), tuple(channel / 255 for channel in list(NEW_CLASS_COLORS.values())[i+1])] # +1 because skipping background
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", color)
 
-        ax[int(i/3), i%3].imshow(image, vmin=0, vmax=1)
-        ax[int(i/3), i%3].set_xticks([])
-        ax[int(i/3), i%3].set_yticks([])
-        ax[int(i/3), i%3].set_title(f"{NEW_CLASS_DICT[i+1]}")
+        ax[int(i/cols), int(i%cols)].imshow(image, vmin=0, vmax=1)
+        ax[int(i/cols), int(i%cols)].set_xticks([])
+        ax[int(i/cols), int(i%cols)].set_yticks([])
+        ax[int(i/cols), int(i%cols)].set_title(f"{NEW_CLASS_DICT[i+1]}")
     fig.suptitle(f"average softmax over MC samples")
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800)
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight')
     plt.close()
 
 def plot_uncertainty_per_class(uncertainty_map, file_path = ".", file_name="uncertainties_per_class", metric=""):
-    fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(6,6))
-    for i, image in enumerate(uncertainty_map[1:]):
-        # create color map
-        color = [tuple((0,0,0)), tuple(channel / 255 for channel in list(NEW_CLASS_COLORS.values())[i+1])] # +1 because skipping background
-        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", color)
+    # fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(6,6))
+    # for i, image in enumerate(uncertainty_map[1:]):
+    #     # create color map
+    #     color = [tuple((0,0,0)), tuple(channel / 255 for channel in list(NEW_CLASS_COLORS.values())[i+1])] # +1 because skipping background
+    #     cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", color)
 
-        cb = ax[int(i/3), i%3].imshow(image, vmin=0, vmax=1)
-        ax[int(i/3), i%3].set_xticks([])
-        ax[int(i/3), i%3].set_yticks([])
-        ax[int(i/3), i%3].set_title(f"{NEW_CLASS_DICT[i+1]}")
-        # fig.colorbar(cb, ax=ax)
-    fig.suptitle(f"uncertainty map per class: {metric}")
-    # plt.colorbar()
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800)
+    #     ax[int(i/3), i%3].imshow(image, vmin=0, vmax=1)
+    #     ax[int(i/3), i%3].set_xticks([])
+    #     ax[int(i/3), i%3].set_yticks([])
+    #     ax[int(i/3), i%3].set_title(f"{NEW_CLASS_DICT[i+1]}")
+    #     # fig.colorbar(cb, ax=ax)
+    # fig.suptitle(f"uncertainty map per class: {metric}")
+    # # plt.colorbar()
+    # plt.savefig(file_path + "/" + file_name + ".png", dpi=600)
+    # plt.close()
+
+    # temp code for 
+
+    rows = 2
+    cols = 5
+    fig, ax = plt.subplots(nrows=rows, ncols=cols, figsize=(cols*2,rows*2))
+    for i, image in enumerate(uncertainty_map):
+        # create color map
+        # color = [tuple((0,0,0)), tuple(channel / 255 for channel in list(NEW_CLASS_COLORS.values())[i])]
+        # cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", color)
+
+
+        im = ax[int(i/cols), int(i%cols)].imshow(image)
+        ax[int(i/cols), int(i%cols)].set_xticks([])
+        ax[int(i/cols), int(i%cols)].set_yticks([])
+        ax[int(i/cols), int(i%cols)].set_title(f"{NEW_CLASS_DICT[i]}")
+    # fig.suptitle(f"uncertainty map per class: {metric}")
+    fig.colorbar(im, ax=ax.ravel().tolist())
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight')
     plt.close()
 
 
 def plot_image(prediction, file_path = ".", file_name="output_per_class"):
-    fig, ax = plt.subplots(nrows=3, ncols=5, figsize=(15,9))
+    rows = 2
+    cols = 5
+
+    fig, ax = plt.subplots(nrows=rows, ncols=cols, figsize=(cols*2,rows*2))
     for i in range(prediction.shape[0]):
-        ax[int(i/5), i%5].imshow(prediction[i], cmap='viridis')
-        ax[int(i/5), i%5].set_xticks([])
-        ax[int(i/5), i%5].set_yticks([])
-        ax[int(i/5), i%5].set_title(f"{NEW_CLASS_DICT[i]}")
-    plt.savefig(file_path + "/" + file_name + ".png")
+        ax[int(i/cols), int(i%cols)].imshow(prediction[i], cmap='viridis')
+        ax[int(i/cols), int(i%cols)].set_xticks([])
+        ax[int(i/cols), int(i%cols)].set_yticks([])
+        ax[int(i/cols), int(i%cols)].set_title(f"{NEW_CLASS_DICT[i]}")
+    plt.savefig(file_path + "/" + file_name + ".png", bbox_inches='tight')
     plt.close()
 
 
@@ -169,9 +195,9 @@ def plot_labels(labels, file_path = ".", file_name = "labels"):
     plt.imshow(labels.reshape((704,704,1)), cmap=mycmap, norm=norm)
 
     plt.axis("off")
-    plt.title("labels")
+    # plt.title("labels")
     plt.colorbar()
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight') #high dpi to prevent blending of colors between classes
     plt.close()
 
 
@@ -186,19 +212,19 @@ def plot_image_overlay_labels(image, labels, file_path = ".", file_name = "image
     plt.imshow(labels.reshape((704,704,1)), cmap=mycmap, norm=norm, alpha=alpha)
 
     plt.axis("off")
-    plt.title("image overlayed with label/prediction")
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    # plt.title("image overlayed with label/prediction")
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight') #high dpi to prevent blending of colors between classes
     plt.close()
 
 
-def plot_uncertainty(uncertainty_map, file_path = ".", file_name = "image_overlay_labels", metric = ""):
+def plot_uncertainty(uncertainty_map, file_path = ".", file_name = "image_overlay_labels", metric = "", title=""):
     fig = plt.figure(figsize=(6,6))
     plt.imshow(uncertainty_map.reshape((704,704,1)))
 
     plt.axis("off")
-    plt.title(f"uncertainty map {metric}")
+    # plt.title(f"uncertainty map {metric}: {title}")
     plt.colorbar()
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight') #high dpi to prevent blending of colors between classes
     plt.close()
 
 
@@ -211,7 +237,7 @@ def plot_metrics(metrics, metrics_to_plot, file_path = ".", file_name = "image_o
         plt.plot(metric_test, label=f"valid_{metric}")
 
     plt.legend()
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800)
+    plt.savefig(file_path + "/" + file_name + ".png", bbox_inches='tight')
 
 
 def plot_roc_curve(fpr, tpr, file_path = ".", file_name = "ROC_curve"):
@@ -221,18 +247,19 @@ def plot_roc_curve(fpr, tpr, file_path = ".", file_name = "ROC_curve"):
     plt.ylabel('True Positive Rate')
     plt.xlabel('False Positive Rate')
 
-    plt.title("ROC")
-    plt.savefig(file_path + "/" + file_name + ".png") #high dpi to prevent blending of colors between classes
+    # plt.title("ROC")
+    plt.savefig(file_path + "/" + file_name + ".png", bbox_inches='tight') 
     plt.close()
 
 
-def plot_image_prediction_certain(image, predictions, uncertainty_map, file_path = ".", file_name = "image_overlay_labels", alpha=0.5, percentile=95, p=None):
+def plot_image_prediction_certain(image, predictions, uncertainty_map, file_path = ".", file_name = "certain_pixels", alpha=0.5, percentile=95, p=None):
     if p == None:
         p = np.percentile(uncertainty_map.flatten(), percentile)
 
-    certain = np.where(uncertainty_map < p, uncertainty_map, 2)
+    certain = np.where(uncertainty_map < p, uncertainty_map, -1)
     predictions = predictions.mean(axis=0).argmax(axis=0).squeeze()
-    predictions_certain = np.where(certain != 2, predictions, 0)
+    predictions_certain = np.ma.masked_where(certain == -1, predictions)
+    # predictions_certain = np.where(certain != -1, predictions, 0)
 
     norm, mycmap = create_color_map()
     fig = plt.figure(figsize=(6,6))
@@ -244,33 +271,133 @@ def plot_image_prediction_certain(image, predictions, uncertainty_map, file_path
     plt.imshow(predictions_certain.reshape((704,704,1)), cmap=mycmap, norm=norm, alpha=alpha)
 
     plt.axis("off")
-    plt.title(f"image overlayed with certain predictions with {percentile}th percentile")
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
+    # plt.title(f"image overlayed with certain predictions with {percentile}th percentile")
+    plt.savefig(file_path + "/" + file_name + ".png", dpi=600, bbox_inches='tight') #high dpi to prevent blending of colors between classes
     plt.close()
 
 
+def plot_image_prediction_wrong(image, predictions, labels, file_path, file_name):
+    wrong_mask = np.ma.masked_where(predictions == labels, predictions)
 
-def plot_image_prediction_certain_structures(image, predictions, uncertainty_per_class, file_path = ".", file_name = "image_overlay_labels", alpha=0.5, percentile=95, p=None):
-    p = []
-    for i in range(NEW_CLASSES):
-        p.append(np.percentile(uncertainty_per_class.mean(axis=(-1, -2)).flatten(), percentile))
+    plot_image_overlay_labels(image, wrong_mask, file_path = file_path, file_name = file_name, alpha=0.6)
 
-    certain = np.where(uncertainty_per_class < p, uncertainty_per_class, 2)
-    predictions = predictions.mean(axis=0).argmax(axis=0).squeeze()
-    predictions_certain = np.where(certain != 2, predictions, 0)
 
-    norm, mycmap = create_color_map()
-    fig = plt.figure(figsize=(6,6))
+def fraction_uncertainty(uncertainty_map, prediction):
+    vessel_fraction = len(prediction[prediction != 0]) / len(prediction.flatten())
 
-    if image.shape[0] == 3:
-        image = image.transpose(1,2,0)
+    return uncertainty_map.mean(), vessel_fraction
 
-    plt.imshow(image)
-    plt.imshow(predictions_certain.reshape((704,704,1)), cmap=mycmap, norm=norm, alpha=alpha)
 
-    plt.axis("off")
-    plt.title(f"image overlayed with certain predictions with {percentile}th percentile")
-    plt.savefig(file_path + "/" + file_name + ".png", dpi=800) #high dpi to prevent blending of colors between classes
-    plt.close()
+def normalise_uncertainty(uncertainty, prediction):
+    vessel_fraction = len(prediction[prediction != 0]) / len(prediction.flatten())
+    uncertainty_score = uncertainty * vessel_fraction
+    return uncertainty_score
 
+
+def normalise_uncertainty_per_class(uncertainty, prediction, clas):
+    class_fraction = len(prediction[prediction == clas]) / len(prediction.flatten())
+    uncertainty_score = uncertainty * class_fraction
+    return uncertainty_score
+
+
+def normalise_uncertainty_lipid_calcium(uncertainty_map_per_class, prediction, clas="calcium"):
+    if clas == "lipid":
+        class_value = 4
+    else:
+        class_value = 5
+
+    fraction = len(prediction[prediction == class_value]) / len(prediction.flatten())
+    normalised_uncertainty_map = uncertainty_map_per_class[class_value] * fraction
+
+    return normalised_uncertainty_map
+
+
+def plot_uncertainty_vs_vessel_fraction(uncertainty_scores_en, uncertainty_scores_mi, vessel_fractions, save_dir):
+    plt.figure(figsize=(6,6))
+    plt.scatter(uncertainty_scores_en, vessel_fractions, label="entropy", color="cornflowerblue")
+    plt.scatter(uncertainty_scores_mi, vessel_fractions, label="mutual information", color="mediumpurple")
+
+    uncertainty_scores_en, vessel_fractions_en = zip(*sorted(zip(uncertainty_scores_en, vessel_fractions)))
+    z = np.polyfit(uncertainty_scores_en, vessel_fractions_en, 1)
+    p_en = np.poly1d(z)
+    plt.plot(uncertainty_scores_en, p_en(uncertainty_scores_en),"--", color="cornflowerblue")
+
+    uncertainty_scores_mi, vessel_fractions_mi = zip(*sorted(zip(uncertainty_scores_mi, vessel_fractions)))
+    z = np.polyfit(uncertainty_scores_mi, vessel_fractions_mi, 1)
+    p_mi = np.poly1d(z)
+    plt.plot(uncertainty_scores_mi, p_mi(uncertainty_scores_mi),"--", color="mediumpurple")
+
+    plt.xlabel("uncertainty scores")
+    plt.ylabel("vessel fraction")
+    plt.legend()
+    plt.savefig(save_dir + "/uncertainty_vs_vessel_fraction.png", bbox_inches='tight')
+
+    plt.figure(figsize=(6,6))
+    plt.scatter(uncertainty_scores_en, vessel_fractions_en, label="entropy", color="cornflowerblue")
+    plt.plot(uncertainty_scores_en, p_en(uncertainty_scores_en),"--", color="cornflowerblue")
+
+    plt.xlabel("uncertainty scores")
+    plt.ylabel("vessel fraction")
+    plt.legend()
+    plt.savefig(save_dir + "/uncertainty_vs_vessel_fraction_en.png", bbox_inches='tight')
+
+    plt.figure(figsize=(6,6))
+    plt.scatter(uncertainty_scores_mi, vessel_fractions_mi, label="mutual information", color="mediumpurple")
+    plt.plot(uncertainty_scores_mi, p_mi(uncertainty_scores_mi),"--", color="mediumpurple")
+
+    plt.xlabel("uncertainty scores")
+    plt.ylabel("vessel fraction")
+    plt.legend()
+    plt.savefig(save_dir + "/uncertainty_vs_vessel_fraction_mi.png", bbox_inches='tight')
+
+
+def neighbouring(image, clas): 
+    neighbourhood = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+    for i in range(1, 703):
+        for j in range(1, 703):
+            if image[i,j] == clas:
+                neighbours = [image[i-1,j], image[i+1,j], image[i,j-1], image[i,j+1], image[i-1,j-1], image[i-1,j+1], image[i+1,j-1], image[i+1,j+1]] # 8 surrounding
+                for k in neighbours:
+                    if k != clas:
+                        neighbourhood[k] += 1
+    return neighbourhood
+                
+def find_closest_dist(centroid, image, clas):
+    closest_dist = 1000
+    for i in range(704):
+        for j in range(704):
+            if image[i,j] == clas:
+                dist = np.linalg.norm(centroid-(i,j))
+                if dist < closest_dist:
+                    closest_dist = dist
+                
+    return closest_dist
+
+
+def find_farthest_dist(centroid, image, clas):
+    farthest_dist = 0
+    for i in range(704):
+        for j in range(704):
+            if image[i,j] == clas:
+                dist = np.linalg.norm(centroid-(i,j))
+                if dist > farthest_dist:
+                    farthest_dist = dist
+                
+    return farthest_dist
+
+
+def mispredictions(outputs, labels, clas):
+    if clas not in labels:
+        return np.nan
     
+    mispredictions = np.zeros(NEW_CLASSES)
+
+    for i in range(704):
+        for j in range(704):
+            if outputs[i,j] == clas and labels[i,j] != clas:
+                # print(labels[i,j])
+                mispredictions[int(labels[i,j])] += 1
+
+    mispredictions = [pixels/mispredictions.sum() for pixels in mispredictions]
+    # print(mispredictions)
+    return mispredictions

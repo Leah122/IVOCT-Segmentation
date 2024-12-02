@@ -1,1 +1,461 @@
-114843: inference test if memory leak is fixed
+114851: inference test if memory leak is fixed
+
+MC dropout
+file_name            NaN
+dice            0.688851
+background      0.975618
+lumen            0.96574
+guidewire       0.918171
+intima          0.837196
+lipid            0.45191
+calcium         0.253556
+media           0.704291
+catheter         0.99061
+sidebranch      0.227218
+healedplaque    0.080407
+auc_roc         0.947314
+auc_pr          0.384056
+Name: mean, dtype: object
+file_name             NaN
+AUC_MI           0.947314
+total_MI         0.002747
+background       0.006712
+lumen            0.002744
+guidewire        0.003203
+intima           0.004043
+lipid            0.003808
+calcium          0.000837
+media            0.003459
+catheter         0.000247
+sidebranch       0.001321
+healedplaque     0.001097
+AUC_Entropy      0.957959
+total_Entropy    0.021305
+background       0.056024
+lumen            0.012374
+guidewire        0.018459
+intima           0.036303
+lipid            0.044168
+calcium           0.00731
+media            0.018546
+catheter         0.000877
+sidebranch         0.0064
+healedplaque     0.012591
+Name: mean, dtype: object
+file_name               NaN
+dice               0.688851
+dice_certain       0.774925
+dice_uncertain      0.38937
+background_c       0.945619
+background_uc      0.017912
+lumen_c            0.971767
+lumen_uc           0.538206
+guidewire_c        0.936524
+guidewire_uc       0.456135
+intima_c            0.88692
+intima_uc          0.537162
+lipid_c            0.513268
+lipid_uc           0.247875
+calcium_c          0.407763
+calcium_uc         0.169588
+media_c            0.774768
+media_uc           0.355538
+catheter_c         0.993298
+catheter_uc         0.52214
+sidebranch_c       0.318421
+sidebranch_uc      0.163819
+healedplaque_c     0.101233
+healedplaque_uc    0.063048
+
+avg dice uncertain images:  0.5995192765513649  /  0.6888513565204751
+avg dice uncertain images (certain pixels):  0.6494986  /  0.77492464
+avg dice uncertain images (uncertain pixels):  0.27374813  /  0.38936982
+avg nr of structures:  6.8  /  7.04
+
+TTA
+dice            0.704027
+background      0.975026
+lumen           0.966583
+guidewire       0.917995
+intima          0.832527
+lipid           0.452713
+calcium         0.343909
+media           0.684969
+catheter        0.990915
+sidebranch      0.260575
+healedplaque    0.081715
+auc_roc          0.94611
+auc_pr          0.395762
+Name: mean, dtype: object
+file_name             NaN
+AUC_MI            0.94611
+total_MI         0.002158
+background         0.0056
+lumen            0.001652
+guidewire        0.002382
+intima           0.003374
+lipid            0.003317
+calcium          0.000574
+media            0.002996
+catheter         0.000127
+sidebranch       0.000869
+healedplaque     0.000689
+AUC_Entropy      0.958025
+total_Entropy    0.018565
+background       0.050487
+lumen            0.009512
+guidewire        0.015201
+intima           0.031266
+lipid            0.039145
+calcium          0.005486
+media            0.017678
+catheter         0.000714
+sidebranch       0.004802
+healedplaque     0.011358
+Name: mean, dtype: object
+file_name               NaN
+dice               0.704027
+dice_certain        0.79411
+dice_uncertain     0.404853
+background_c       0.945755
+background_uc       0.01959
+lumen_c            0.973284
+lumen_uc           0.551742
+guidewire_c        0.939919
+guidewire_uc       0.451192
+intima_c           0.887699
+intima_uc          0.543215
+lipid_c            0.523062
+lipid_uc           0.247293
+calcium_c          0.487422
+calcium_uc         0.252566
+media_c            0.759004
+media_uc           0.327928
+catheter_c         0.994248
+catheter_uc        0.571682
+sidebranch_c       0.341014
+sidebranch_uc      0.171166
+healedplaque_c     0.127146
+healedplaque_uc    0.063264
+
+avg dice uncertain images:  0.5879227101664644  /  0.7040267714043
+avg dice uncertain images (certain pixels):  0.6938326  /  0.7941096
+avg dice uncertain images (uncertain pixels):  0.26860526  /  0.4048525
+avg nr of structures:  6.8  /  7.04
+
+
+Ensembles:
+dice            0.694052
+background      0.973993
+lumen           0.966508
+guidewire       0.922559
+intima          0.833913
+lipid           0.406457
+calcium         0.276199
+media           0.680493
+catheter        0.989819
+sidebranch      0.321794
+healedplaque    0.083886
+auc_roc         0.941029
+auc_pr          0.364908
+Name: mean, dtype: object
+file_name             NaN
+AUC_MI           0.941029
+total_MI         0.005846
+background       0.016266
+lumen            0.002908
+guidewire        0.004041
+intima           0.008319
+lipid            0.013442
+calcium          0.001587
+media            0.007071
+catheter         0.000198
+sidebranch       0.002712
+healedplaque     0.001917
+AUC_Entropy       0.95408
+total_Entropy    0.024225
+background       0.065026
+lumen            0.011739
+guidewire        0.018432
+intima           0.039936
+lipid            0.053689
+calcium          0.008162
+media            0.022372
+catheter         0.000766
+sidebranch       0.008569
+healedplaque     0.013564
+Name: mean, dtype: object
+file_name               NaN
+dice               0.694052
+dice_certain       0.798991
+dice_uncertain     0.363848
+background_c       0.942898
+background_uc      0.019174
+lumen_c            0.970202
+lumen_uc           0.549048
+guidewire_c        0.933965
+guidewire_uc       0.450723
+intima_c           0.882222
+intima_uc           0.49152
+lipid_c            0.534434
+lipid_uc           0.222804
+calcium_c          0.618803
+calcium_uc          0.19247
+media_c            0.748948
+media_uc            0.31445
+catheter_c            0.992
+catheter_uc        0.401312
+sidebranch_c       0.410834
+sidebranch_uc      0.201167
+healedplaque_c     0.114401
+healedplaque_uc    0.060637
+
+avg dice uncertain images:  0.5138059594231621  /  0.694052197902116
+avg dice uncertain images (certain pixels):  0.5865556  /  0.7989913
+avg dice uncertain images (uncertain pixels):  0.21978767  /  0.36384833
+avg nr of structures:  6.8  /  7.04
+
+
+
+TODO: calculate 90th percentile at the end and then filter?
+
+
+uncertain images according to MC (10 samples): 
+['NLDISALA0032_1_frame260_221' 'NLDRADB0054_1_frame432_258'
+ 'NLDRADB0054_1_frame424_258' 'NLDZUYD0004_1_frame520_226'
+ 'NLDUMCG0002_1_frame385_197' 'NLDRADB0088_2_frame400_056'
+ 'NLDRADB0088_2_frame320_056' 'RUSMNRC0009_1_frame196_190'
+ 'NLDRADB0071_1_frame380_225' 'NLDTERG0008_1_frame280_188'
+ 'NLDISALA0012_1_frame232_253' 'NLDISALA0080_1_frame257_179'
+ 'NLDTERG0008_1_frame275_188' 'RUSMNRC0009_1_frame193_190'
+ 'NLDRADB0054_1_frame430_258' 'NLDISALA0080_1_frame280_179'
+ 'NLDRADB0071_1_frame368_225' 'NLDISALA0053_1_frame200_177'
+ 'NLDISALA0053_1_frame120_177' 'NLDRADB0071_1_frame410_225'
+ 'NLDRADB0058_2_frame480_142' 'NLDAMPH0028_1_frame360_126'
+ 'NLDISALA0080_1_frame250_179' 'NLDISALA0083_1_frame440_242'
+ 'NLDRADB0088_2_frame440_056' 'NLDISALA0053_1_frame320_177'
+ 'NLDISALA0012_1_frame90_253' 'RUSMNRC0009_1_frame194_190'
+ 'NLDRADB0088_2_frame360_056' 'NLDISALA0012_1_frame326_253'
+ 'NLDRADB0054_1_frame200_258' 'RUSMNRC0009_1_frame200_190'
+ 'NLDUMCG0002_1_frame360_197' 'NLDISALA0012_1_frame100_253'
+ 'RUSMNRC0009_1_frame195_190' 'NLDRADB0071_1_frame420_225'
+ 'NLDRADB0058_2_frame360_142' 'RUSMNRC0009_1_frame192_190'
+ 'NLDISALA0012_1_frame70_253' 'NLDUMCG0002_1_frame340_197'
+ 'NLDRADB0003_1_frame280_068' 'NLDRADB0054_1_frame427_258'
+ 'NLDAMPH0039_1_frame120_109' 'NLDTERG0008_1_frame80_188'
+ 'NLDTERG0008_1_frame320_188' 'NLDRADB0071_1_frame400_225'
+ 'NLDISALA0012_1_frame140_253' 'NLDISALA0012_1_frame371_253'
+ 'NLDRADB0058_2_frame400_142' 'NLDAMPH0011_1_frame192_005'
+ 'NLDAMPH0075_1_frame360_164' 'NLDISALA0040_1_frame80_270'
+ 'NLDAMPH0039_1_frame80_109' 'NLDUMCG0002_1_frame320_197'
+ 'NLDISALA0078_1_frame280_222' 'RUSMNRC0009_1_frame197_190'
+ 'NLDAMPH0039_1_frame240_109' 'NLDUMCG0002_1_frame400_197'
+ 'NLDISALA0083_1_frame437_242' 'NLDAMPH0039_1_frame160_109'
+ 'NLDRADB0021_1_frame480_081' 'NLDISALA0012_1_frame48_253'
+ 'NLDISALA0012_1_frame64_253' 'NLDRADB0054_1_frame440_258'
+ 'NLDRADB0054_1_frame425_258']
+
+avg dice uncertain images:  0.5946595148619204  /  0.6961893930005045
+avg dice certain images:  0.7075677414125874  /  0.6961893930005045
+avg dice uncertain images (certain pixels):  0.62024254  /  0.78101856
+avg dice uncertain images (uncertain pixels):  0.26007077  /  0.38705468
+avg nr of structures:  7.7846153846153845  /  7.17984496124031
+
+certainty for class:  background
+avg dice uncertain images:  0.9321890879254112  /  0.9748669663976366
+avg dice certain images:  0.9796498320884893  /  0.9748669663976366
+
+certainty for class:  lumen
+avg dice uncertain images:  0.9144181452074912  /  0.9628115028744175
+avg dice certain images:  0.968234896406056  /  0.9628115028744175
+
+certainty for class:  guidewire
+avg dice uncertain images:  0.822135042055498  /  0.9051641409757019
+avg dice certain images:  0.914469126199518  /  0.9051641409757019
+
+certainty for class:  intima
+avg dice uncertain images:  0.7067819250428835  /  0.8180828600711508
+avg dice certain images:  0.8305562407208705  /  0.8180828600711508
+
+certainty for class:  lipid
+avg dice uncertain images:  0.5196742991080522  /  0.4411504034400827
+avg dice certain images:  0.43010266920108264  /  0.4411504034400827
+
+certainty for class:  calcium
+avg dice uncertain images:  0.33362568225535144  /  0.2912778512343483
+avg dice certain images:  0.2837294463091544  /  0.2912778512343483
+
+certainty for class:  media
+avg dice uncertain images:  0.39652891531337914  /  0.6953143559563544
+avg dice certain images:  0.727768636577919  /  0.6953143559563544
+
+certainty for class:  catheter
+avg dice uncertain images:  0.9867957408252371  /  0.9899589248551308
+avg dice certain images:  0.9903134196171016  /  0.9899589248551308
+
+certainty for class:  sidebranch
+avg dice uncertain images:  0.2570029255445711  /  0.2615624987242458
+avg dice certain images:  0.2622246774017919  /  0.2615624987242458
+
+certainty for class:  healed plaque
+avg dice uncertain images:  0.07604384299234086  /  0.1422545284383484
+avg dice certain images:  0.15140559878454457  /  0.1422545284383484
+
+
+
+uncertain images according to TTA (10 samples): ['NLDISALA0032_1_frame260_221' 'NLDRADB0054_1_frame432_258'
+ 'NLDRADB0054_1_frame424_258' 'NLDZUYD0004_1_frame520_226'
+ 'NLDUMCG0002_1_frame385_197' 'NLDRADB0088_2_frame400_056'
+ 'NLDRADB0088_2_frame320_056' 'RUSMNRC0009_1_frame196_190'
+ 'NLDTERG0008_1_frame280_188' 'NLDISALA0012_1_frame232_253'
+ 'NLDISALA0040_1_frame40_270' 'NLDISALA0080_1_frame257_179'
+ 'NLDTERG0008_1_frame275_188' 'RUSMNRC0009_1_frame193_190'
+ 'NLDRADB0054_1_frame430_258' 'NLDISALA0080_1_frame280_179'
+ 'NLDISALA0053_1_frame200_177' 'NLDISALA0080_1_frame80_179'
+ 'NLDISALA0053_1_frame120_177' 'NLDRADB0071_1_frame410_225'
+ 'NLDRADB0058_2_frame480_142' 'NLDAMPH0028_1_frame360_126'
+ 'NLDISALA0080_1_frame250_179' 'NLDISALA0083_1_frame440_242'
+ 'NLDRADB0088_2_frame440_056' 'NLDISALA0053_1_frame320_177'
+ 'NLDISALA0012_1_frame90_253' 'RUSMNRC0009_1_frame194_190'
+ 'NLDRADB0088_2_frame360_056' 'NLDISALA0012_1_frame326_253'
+ 'NLDRADB0054_1_frame200_258' 'RUSMNRC0009_1_frame200_190'
+ 'NLDUMCG0002_1_frame360_197' 'NLDISALA0012_1_frame100_253'
+ 'RUSMNRC0009_1_frame195_190' 'NLDRADB0080_1_frame120_123'
+ 'NLDRADB0058_2_frame360_142' 'RUSMNRC0009_1_frame192_190'
+ 'NLDISALA0012_1_frame70_253' 'NLDUMCG0002_1_frame340_197'
+ 'NLDRADB0003_1_frame280_068' 'NLDRADB0054_1_frame427_258'
+ 'NLDAMPH0039_1_frame120_109' 'NLDTERG0008_1_frame80_188'
+ 'NLDTERG0008_1_frame320_188' 'NLDRADB0071_1_frame400_225'
+ 'NLDISALA0012_1_frame140_253' 'NLDISALA0012_1_frame371_253'
+ 'NLDRADB0058_2_frame400_142' 'NLDAMPH0075_1_frame360_164'
+ 'NLDISALA0040_1_frame80_270' 'NLDAMPH0039_1_frame80_109'
+ 'NLDUMCG0002_1_frame320_197' 'NLDISALA0078_1_frame280_222'
+ 'RUSMNRC0009_1_frame197_190' 'NLDAMPH0039_1_frame240_109'
+ 'NLDRADB0028_1_frame400_085' 'NLDUMCG0002_1_frame400_197'
+ 'NLDISALA0032_1_frame280_221' 'NLDISALA0083_1_frame437_242'
+ 'NLDAMPH0039_1_frame160_109' 'NLDISALA0012_1_frame48_253'
+ 'NLDISALA0012_1_frame64_253' 'NLDRADB0054_1_frame440_258'
+ 'NLDRADB0054_1_frame425_258']
+avg dice uncertain images:  0.5839910520096154  /  0.703221796906545
+avg dice certain images:  0.716583863144994  /  0.703221796906545
+avg dice uncertain images (certain pixels):  0.61753684  /  0.7894034
+avg dice uncertain images (uncertain pixels):  0.24984868  /  0.3981697
+avg nr of structures:  7.707692307692308  /  7.17984496124031
+
+certainty for class:  background
+avg dice uncertain images:  0.9363476442686435  /  0.9746533315288267
+avg dice certain images:  0.9789462102735025  /  0.9746533315288267
+
+certainty for class:  lumen
+avg dice uncertain images:  0.9149579038489335  /  0.9635558600480015
+avg dice certain images:  0.9690021827254833  /  0.9635558600480015
+
+certainty for class:  guidewire
+avg dice uncertain images:  0.8260622898067411  /  0.9092087472541355
+avg dice certain images:  0.9185268847266882  /  0.9092087472541355
+
+certainty for class:  intima
+avg dice uncertain images:  0.7096380764398614  /  0.8137861990414859
+avg dice certain images:  0.8254579714020127  /  0.8137861990414859
+
+certainty for class:  lipid
+avg dice uncertain images:  0.4882787845179059  /  0.4499619900202187
+avg dice certain images:  0.444352549384296  /  0.4499619900202187
+
+certainty for class:  calcium
+avg dice uncertain images:  0.2844237414842111  /  0.31620982667015646
+avg dice certain images:  0.3226111910478815  /  0.31620982667015646
+
+certainty for class:  media
+avg dice uncertain images:  0.3629745019744161  /  0.6696815936155496
+avg dice certain images:  0.7029963294317416  /  0.6696815936155496
+
+certainty for class:  catheter
+avg dice uncertain images:  0.9855358126774085  /  0.9897550054026683
+avg dice certain images:  0.9902278459667059  /  0.9897550054026683
+
+certainty for class:  sidebranch
+avg dice uncertain images:  0.23425333131230552  /  0.27612108116976875
+avg dice certain images:  0.28358446266609916  /  0.27612108116976875
+
+certainty for class:  healed plaque
+avg dice uncertain images:  0.09908564646072598  /  0.15056322992648732
+avg dice certain images:  0.15725950094642374  /  0.15056322992648732
+
+
+'NLDZUYD0004_1_frame245_226': small vessel, small location with double media, which MI is very uncertain about, also very small wrong healed plaque, lipid and sidebranch correct
+'RUSMNRC0009_1_frame0_190': small vessel, no lipid or calcium, but a lot of blood artefact, which makes it miss the media, and predict a small sidebranch at a macrophage
+'NLDRADB0086_1_frame400_055': big vessel, very large lipid pool, with big calcium in front, some form of artefact, prediction misses a large part of the lipid
+'NLDISALA0023_1_frame480_269': small vessel, prediction shows healed plaque, which i personally think is fair, sidebranch difficult to dilineate because of artefact, lipid in annotation has a weird shape
+'NLDISALA0085_1_frame80_042: small vessel, seems to have a sidebranch that is not annotated, which the model did predict, unclear where lipid ends at 11 till 12
+
+
+116008: nr samples experiment with mc
+116562/116586: nr samples experiment with TTA
+
+
+116647: inference to plot vessel fraction against uncertainty
+
+116772: training final-ish model id 1
+
+With TTA 10 samples on full dataset:
+avg dice uncertain images:  0.5679508804150706  /  0.7032246646983324
+avg dice certain images:  0.7183846577645601  /  0.7032246646983324
+avg dice uncertain images (certain pixels):  0.6504709  /  0.83839047
+avg dice uncertain images (uncertain pixels):  0.3131887  /  0.486423
+avg nr of structures:  7.707692307692308  /  7.17984496124031
+
+certainty for class:  lipid
+avg dice uncertain images:  0.3989622912732186  /  0.44996528702609756
+avg dice certain images:  0.4574319418097397  /  0.44996528702609756
+
+certainty for class:  calcium
+avg dice uncertain images:  0.3168947533587217  /  0.3162538289145952
+avg dice certain images:  0.3161300641943501  /  0.3162538289145952
+
+TODO: Uncertain images to check: 'RUSMNRC0009_1_frame0_190' 'NLDRADB0086_1_frame400_055'
+ 'NLDISALA0085_1_frame80_042' 'NLDISALA0044_1_frame390_173'
+ 'NLDRADB0021_1_frame360_081' 'NLDZUYD0004_1_frame520_226'
+ 'NLDRADB0088_2_frame400_056' 'NLDRADB0088_2_frame320_056'
+ 'NLDZUYD0004_1_frame242_226' 'RUSMNRC0009_1_frame196_190'
+ 'NLDRADB0071_1_frame280_225' 'NLDAMPH0028_1_frame236_126'
+ 'NLDTERG0008_1_frame280_188' 'NLDISALA0012_1_frame232_253'
+ 'NLDISALA0080_1_frame257_179' 'NLDTERG0008_1_frame275_188'
+ 'NLDAMPH0075_1_frame0_164' 'NLDRADB0024_1_frame160_092'
+ 'NLDISALA0097_1_frame40_052' 'NLDISALA0080_1_frame280_179'
+ 'NLDISALA0080_1_frame80_179' 'NLDRADB0071_1_frame410_225'
+ 'NLDISALA0090_1_frame280_047' 'NLDISALA0055_1_frame40_273'
+ 'NLDISALA0080_1_frame250_179' 'NLDRADB0088_2_frame440_056'
+ 'NLDZUYD0004_1_frame240_226' 'NLDISALA0078_1_frame200_222'
+ 'NLDISALA0012_1_frame326_253' 'NLDRADB0054_1_frame200_258'
+ 'RUSMNRC0009_1_frame200_190' 'NLDZUYD0004_1_frame280_226'
+ 'NLDAMPH0028_1_frame177_126' 'NLDISALA0012_1_frame165_253'
+ 'NLDISALA0012_1_frame100_253' 'NLDRADB0086_1_frame280_055'
+ 'NLDRADB0080_1_frame120_123' 'NLDTERG0008_1_frame200_188'
+ 'NLDRADB0058_2_frame360_142' 'NLDAMPH0028_1_frame235_126'
+ 'NLDISALA0012_1_frame70_253' 'NLDISALA0080_1_frame240_179'
+ 'NLDUMCG0002_1_frame340_197' 'NLDISALA0065_1_frame200_034'
+ 'RUSMNRC0009_1_frame8_190' 'NLDRADB0003_1_frame80_068'
+ 'NLDAMPH0039_1_frame120_109' 'NLDRADB0071_1_frame400_225'
+ 'NLDISALA0012_1_frame140_253' 'NLDISALA0012_1_frame371_253'
+ 'NLDRADB0058_2_frame400_142' 'NLDAMPH0075_1_frame360_164'
+ 'NLDAMPH0039_1_frame80_109' 'NLDISALA0078_1_frame170_222'
+ 'NLDISALA0085_1_frame160_042' 'RUSMNRC0009_1_frame197_190'
+ 'NLDAMPH0039_1_frame240_109' 'NLDUMCG0002_1_frame400_197'
+ 'NLDAMPH0039_1_frame160_109' 'NLDISALA0065_2_frame80_034'
+ 'NLDISALA0012_1_frame48_253' 'NLDISALA0012_1_frame64_253'
+ 'NLDISALA0023_1_frame360_269' 'NLDRADB0058_2_frame80_142'
+ 'NLDAMPH0028_1_frame179_126'
+
+
+Hypthesis seems to be right, 
+avg lipid percentage:  0.06042581353305786  /  0.024938500774793385
+avg calcium percentage:  0.011514559659090907  /  0.0027601207386363635
+higher calcium and lipid percentages, so there's no cases that lipid or calcium is predicted but not there
+
+118164: final results for ensembles over whole val set
+
+118955: results for TTA to check sensitivity and specificity
+118954: should print all images 
+
+TODO: test fraction of images with lipid from subgroup_inference

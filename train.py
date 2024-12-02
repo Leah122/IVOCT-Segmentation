@@ -24,6 +24,7 @@ class Trainer:
         weight_decay: float = 0.0,
         class_weight_power: float = 0.5,
         dice_weight: int = 2,
+        lipid_calcium_weight: float = 0.0
     ):
         
         self.data_dir = data_dir
@@ -39,6 +40,7 @@ class Trainer:
         self.aug_gaussian_sigma = 0.3
         self.dice_weight = dice_weight
         self.class_weight_power = class_weight_power
+        self.lipid_calcium_weight = lipid_calcium_weight
         self.job_id = job_id
 
         train_on_gpu = torch.cuda.is_available()
@@ -96,8 +98,8 @@ class Trainer:
 
         # add extra importance to lipid and calcium (4,5)
         weights = np.array(self.dataset_train.class_weights)
-        weights[4] += 0.5
-        weights[5] += 0.5
+        weights[4] += self.lipid_calcium_weight
+        weights[5] += self.lipid_calcium_weight
 
         class_weights = torch.tensor(weights).to(self.device).type(torch.cuda.FloatTensor)
         cross_entropy_func = torch.nn.CrossEntropyLoss(weight=class_weights) 
@@ -288,6 +290,7 @@ def main():
     parser.add_argument("--weight_decay", type=float, default=0.9)
     parser.add_argument("--class_weight_power", type=float, default=4.0, help='the square used to recalculate the class weights')
     parser.add_argument("--dice_weight", type=int, default=2, help='weight added to the dice score')
+    parser.add_argument("--lipid_calcium_weight", type=float, default=0.0, help='float value to add to lipid and calcium')
     parser.add_argument("--job_id", type=str, default="1", help='id to add to the job when running multiple')
 
     args = parser.parse_args()
@@ -302,7 +305,8 @@ def main():
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         class_weight_power=args.class_weight_power,
-        dice_weight=args.dice_weight
+        dice_weight=args.dice_weight,
+        lipid_calcium_weight=args.lipid_calcium_weight,
     )
     trainer.train()
 

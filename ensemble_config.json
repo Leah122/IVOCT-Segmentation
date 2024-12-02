@@ -1,0 +1,80 @@
+{
+    "0": {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+
+    "1":
+        {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+    
+    "2":
+        {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 3,
+            "lipid_calcium_weight": 0
+        },
+
+    "3":
+        {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 5,
+            "lipid_calcium_weight": 0
+        },
+
+    "4":
+        {
+            "dropout": 0.25,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+
+    "5":
+        {
+            "dropout": 0.35,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+
+    "6":
+        {
+            "dropout": 0.3,
+            "dice_weight": 1,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+
+    "7":
+        {
+            "dropout": 0.3,
+            "dice_weight": 3,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0
+        },
+
+    "8":
+        {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0.2
+        },
+
+    "9":
+        {
+            "dropout": 0.3,
+            "dice_weight": 2,
+            "class_weight_power": 4,
+            "lipid_calcium_weight": 0.4
+        }
+}

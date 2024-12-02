@@ -45,4 +45,21 @@ avg dice uncertain images (uncertain pixels):  0.21771029  /  0.36804414
 avg nr of structures:  6.8  /  7.04
 
 
+116592: training ensembles 0 and 1 
+116871: training ensembles 2 and 3
+117318: training ensembles 4, 5 and 6
+117319: training ensembles 7, 8 and 9
+
+seff from training 2 models takes 22 GB
+
+0 0.5688012047314349
+1 0.5815876464784882
+2 0.5645217568050196
+3 0.5952898636460304
+4 0.5929223792052564
+5 0.5722852809193694
+6 0.5583504890954053
+7 0.5776219084858895
+8 0.5753973523775736
+9 0.573777312040329
 
