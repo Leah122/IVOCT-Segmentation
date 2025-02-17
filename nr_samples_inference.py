@@ -23,7 +23,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def augment(image, samples = 10):
         flips = [[0,0], [0,1], [1,0], [1,1]]
-        rotations = [0, 30, 60, 90, 120, 180]
+        rotations = [0, 60, 120, 240, 300]
 
         augmentations = []
         for i in range(len(flips)):
@@ -269,7 +269,7 @@ def plot_metrics(save_dir, mc_samples, nr_ensembles, tta_samples):
 
     print(metrics_list)
     
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(5,5))
     plt.plot(y, metrics_list["AUC_MI"], label="AUC_MI", color="cornflowerblue")
     plt.plot(y, metrics_list["AUC_EN"], label="AUC_EN", color="mediumpurple")
     plt.xlabel("nr of samples")
@@ -278,7 +278,7 @@ def plot_metrics(save_dir, mc_samples, nr_ensembles, tta_samples):
     plt.legend()
     plt.savefig(save_dir_experiment + "/" + "plot_auc.png", dpi=800, bbox_inches='tight')
 
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(5,5))
     plt.plot(y, metrics_list["dice"], label="dice", color="cornflowerblue")
     plt.xlabel("nr of samples")
     plt.ylabel("dice score")
@@ -313,7 +313,7 @@ def plot_all(save_dir):
         metrics_all[method] = metrics_list
     print(metrics_all)
     
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(5,5))
 
     plt.plot(metrics_all["mc"]["y"], metrics_all["mc"]["AUC_MI"], label="mc: AUC_MI", color="cornflowerblue")
     plt.plot(metrics_all["mc"]["y"], metrics_all["mc"]["AUC_EN"], label="mc: AUC_EN", color="mediumpurple")
@@ -325,7 +325,7 @@ def plot_all(save_dir):
     plt.legend(loc='lower right')
     plt.savefig(save_dir_experiment + "/" + "plot_auc.png", dpi=800, bbox_inches='tight')
 
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(5,5))
     plt.plot(metrics_all["mc"]["y"], metrics_all["mc"]["dice"], label="mc: dice", color="cornflowerblue")
     plt.plot(metrics_all["tta"]["y"], metrics_all["tta"]["dice"], label="tta: dice", color="mediumpurple")
     plt.xlabel("nr of samples")
@@ -368,6 +368,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-# python inference.py --data_dir "./data/val" --save_dir "./data"
-# /data/diag/rubenvdw/nnU-net/Codes/dataset-conversion/Carthesian_view/15_classes/segs_conversion_2d

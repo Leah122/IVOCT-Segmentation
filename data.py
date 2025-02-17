@@ -58,7 +58,6 @@ class OCTDataset(Dataset):
             self.files = ["_".join(str(file).split("_")[:-1])+".nii.gz" for file in self.files]
             self.files = list(set(self.files))
 
-
         if self.debugging:
             self.files = self.files[:50]
         if self.uncertain:

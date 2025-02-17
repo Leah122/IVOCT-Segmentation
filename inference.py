@@ -9,146 +9,146 @@ from tqdm import tqdm
 import argparse
 import gc
 from torch.utils.data import DataLoader
-import torchvision.transforms.functional as tf
-import shutil
+# import torchvision.transforms.functional as tf
+# import shutil
 
 from data import OCTDataset
-from model2 import U_Net
+# from model2 import U_Net
 from constants import NEW_CLASSES, NEW_CLASS_DICT
-from metrics import AUCPR, AUCROC, MI, entropy, entropy_per_class, MI_per_class, group_analysis, filter_uncertain_images, sensitivity_specificity
+from metrics import AUCPR, AUCROC, MI, entropy, entropy_per_class, MI_per_class, group_analysis, filter_uncertain_images, sensitivity_specificity, entropy_per_class_avg, brier_score
 from utils import *
 # plot_uncertainty_per_class, plot_image_overlay_labels, plot_uncertainty, plot_softmax_labels_per_class, plot_image_prediction_certain, dice_score, normalise_uncertainty, plot_uncertainty_vs_vessel_fraction, fraction_uncertainty, plot_image_prediction_wrong
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def augment(image, samples = 10):
-        flips = [[0,0], [0,1], [1,0], [1,1]]
-        rotations = [0, 30, 60, 90, 120, 180]
+# def augment(image, samples = 10):
+#         flips = [[0,0], [0,1], [1,0], [1,1]]
+#         rotations = [0, 60, 120, 240, 300]
 
-        augmentations = []
-        for i in range(len(flips)):
-            for j in range(len(rotations)):
-                augmentations.append(flips[i] + [rotations[j]])
+#         augmentations = []
+#         for i in range(len(flips)):
+#             for j in range(len(rotations)):
+#                 augmentations.append(flips[i] + [rotations[j]])
 
-        images_aug = []
-        augmentations = augmentations[:samples]
+#         images_aug = []
+#         augmentations = augmentations[:samples]
 
-        for aug in augmentations:
-            image_aug = tf.rotate(image, aug[2], fill=0)
+#         for aug in augmentations:
+#             image_aug = tf.rotate(image, aug[2], fill=0)
             
-            if aug[0] == 1:
-                image_aug = tf.hflip(image_aug)
+#             if aug[0] == 1:
+#                 image_aug = tf.hflip(image_aug)
 
-            if aug[1] == 1:
-                image_aug = tf.vflip(image_aug)
+#             if aug[1] == 1:
+#                 image_aug = tf.vflip(image_aug)
 
-            images_aug.append(image_aug)
-            del image_aug
+#             images_aug.append(image_aug)
+#             del image_aug
 
-        return images_aug, augmentations
+#         return images_aug, augmentations
 
-def reverse_augment(images, augmentations):
-    outputs = []
+# def reverse_augment(images, augmentations):
+#     outputs = []
 
-    for aug, image in zip(augmentations, images):
+#     for aug, image in zip(augmentations, images):
     
-        if aug[1] == 1:
-            image = tf.vflip(image)
+#         if aug[1] == 1:
+#             image = tf.vflip(image)
 
-        if aug[0] == 1:
-            image = tf.hflip(image)
+#         if aug[0] == 1:
+#             image = tf.hflip(image)
 
-        image = tf.rotate(image, 360-aug[2])#, fill=[1,0,0,0,0,0,0,0,0,0])
+#         image = tf.rotate(image, 360-aug[2], fill=[1,0,0,0,0,0,0,0,0,0])
         
-        outputs.append(image.detach().cpu().numpy().squeeze())
+#         outputs.append(image.detach().cpu().numpy().squeeze())
 
-    return outputs
+#     return outputs
 
-def load_model_mc(dropout, save_dir, model_id):
-    model = U_Net(dropout=dropout, softmax=True).to(device)
+# def load_model_mc(dropout, save_dir, model_id):
+#     model = U_Net(dropout=dropout, softmax=True).to(device)
 
-    checkpoint = torch.load(save_dir / f"last_model_{model_id}.pth", weights_only=True)
-    model.load_state_dict(checkpoint)
-    model.eval()
-    if dropout > 0:
-        for m in model.modules(): # turn dropout back on
-            if m.__class__.__name__.startswith('Dropout'):
-                m.train()
-    return model
+#     checkpoint = torch.load(save_dir / f"last_model_{model_id}.pth", weights_only=True)
+#     model.load_state_dict(checkpoint)
+#     model.eval()
+#     if dropout > 0:
+#         for m in model.modules(): # turn dropout back on
+#             if m.__class__.__name__.startswith('Dropout'):
+#                 m.train()
+#     return model
 
-def load_model_tta(save_dir, model_id):
-    model = U_Net(dropout=0.0, softmax=True).to(device)
+# def load_model_tta(save_dir, model_id):
+#     model = U_Net(dropout=0.0, softmax=True).to(device)
 
-    checkpoint = torch.load(save_dir / f"last_model_{model_id}.pth", weights_only=True)
-    model.load_state_dict(checkpoint)
-    model.eval()
+#     checkpoint = torch.load(save_dir / f"last_model_{model_id}.pth", weights_only=True)
+#     model.load_state_dict(checkpoint)
+#     model.eval()
 
-    return model
+#     return model
 
-def load_model_ensemble(save_dir, model_id, nr_models):
-    models = []
+# def load_model_ensemble(save_dir, model_id, nr_models):
+#     models = []
 
-    for i in range(nr_models):
-        model = U_Net(dropout=0.0, softmax=True).to(device)
-        checkpoint = torch.load(save_dir / f"model_{i}" / f"last_model_{model_id}.pth", weights_only=True)
-        model.load_state_dict(checkpoint)
-        model.eval()
+#     for i in range(nr_models):
+#         model = U_Net(dropout=0.0, softmax=True).to(device)
+#         checkpoint = torch.load(save_dir / f"model_{i}" / f"last_model_{model_id}.pth", weights_only=True)
+#         model.load_state_dict(checkpoint)
+#         model.eval()
 
-        models.append(model)
-    return models
+#         models.append(model)
+#     return models
 
-@torch.no_grad()
-def make_predictions_mc(sample, model, nr_samples):
-    image = sample["image"].to(device)
-    labels = sample["labels"].detach().cpu().numpy()
+# @torch.no_grad()
+# def make_predictions_mc(sample, model, nr_samples):
+#     image = sample["image"].to(device)
+#     labels = sample["labels"].detach().cpu().numpy()
 
-    with torch.no_grad():
-        outputs = np.zeros((nr_samples, NEW_CLASSES, 704, 704))
-        for mc in range(nr_samples):
-            outputs[mc] = model(image).detach().cpu().numpy().squeeze()
+#     with torch.no_grad():
+#         outputs = np.zeros((nr_samples, NEW_CLASSES, 704, 704))
+#         for mc in range(nr_samples):
+#             outputs[mc] = model(image).detach().cpu().numpy().squeeze()
 
-    image = image.detach().cpu().numpy()
+#     image = image.detach().cpu().numpy()
 
-    return outputs, image, labels
+#     return outputs, image, labels
 
-@torch.no_grad()
-def make_predictions_ensemble(sample, model, nr_samples):
-    image = sample["image"].to(device)
-    labels = sample["labels"].detach().cpu().numpy()
+# @torch.no_grad()
+# def make_predictions_ensemble(sample, model, nr_samples):
+#     image = sample["image"].to(device)
+#     labels = sample["labels"].detach().cpu().numpy()
 
-    with torch.no_grad():
-        outputs = np.zeros((nr_samples, NEW_CLASSES, 704, 704))
-        for i, model_i in enumerate(model):
-            outputs[i] = model_i(image).detach().cpu().numpy().squeeze()
+#     with torch.no_grad():
+#         outputs = np.zeros((nr_samples, NEW_CLASSES, 704, 704))
+#         for i, model_i in enumerate(model):
+#             outputs[i] = model_i(image).detach().cpu().numpy().squeeze()
 
-    image = image.detach().cpu().numpy()
+#     image = image.detach().cpu().numpy()
 
-    return outputs, image, labels
+#     return outputs, image, labels
 
-@torch.no_grad()
-def make_predictions_tta(sample, model, nr_samples):
-    image = sample["image"].to(device)
-    labels = sample["labels"].detach().cpu().numpy()
+# @torch.no_grad()
+# def make_predictions_tta(sample, model, nr_samples):
+#     image = sample["image"].to(device)
+#     labels = sample["labels"].detach().cpu().numpy()
 
-    images, augmentations = augment(image, nr_samples)
+#     images, augmentations = augment(image, nr_samples)
 
-    with torch.no_grad():
-        outputs = [] 
-        for image_i in images:
-            outputs.append(model(image_i).squeeze())
+#     with torch.no_grad():
+#         outputs = [] 
+#         for image_i in images:
+#             outputs.append(model(image_i).squeeze())
     
-    outputs = reverse_augment(outputs, augmentations)
+#     outputs = reverse_augment(outputs, augmentations)
 
-    image = image.detach().cpu().numpy()
+#     image = image.detach().cpu().numpy()
 
-    return np.array(outputs), image, labels
+#     return np.array(outputs), image, labels
 
 
 @torch.no_grad()
 def inference(
     data_dir: Path, 
     save_dir: Path, 
-    dropout: float,
+    dropout: float = 0.2,
     validation: bool = True,
     mc_samples: int = 0,
     model_id: str = "1",
@@ -165,7 +165,7 @@ def inference(
         model = load_model_tta(save_dir, model_id)
         print(f"nr of TTA samples: {tta_samples}")
     else:
-        model = load_model_mc(dropout, save_dir, model_id)
+        model = load_model_mc(save_dir, model_id, dropout)
         print(f"nr of MC samples: {mc_samples}, with dropout: {dropout}")
     print("model id: ", model_id)
 
@@ -191,6 +191,10 @@ def inference(
     uncertainty_scores_mi = []
     vessel_fractions = []
     sens_spec = {4: np.zeros(4), 5: np.zeros(4), 8: np.zeros(4), 9: np.zeros(4)}
+    total_distances_lipid_certain = []
+    total_distances_lipid_uncertain = []
+    total_distances_calcium_certain = []
+    total_distances_calcium_uncertain = []
 
     metrics = pd.DataFrame(columns=['file_name', 'dice', 'background', 'lumen', 'guidewire', 'intima', 'lipid', 'calcium', 'media', 'catheter', 'sidebranch', 'healedplaque', 'auc_roc'])
     uncertainty_metrics = pd.DataFrame(columns=['file_name', 'AUC_MI', 'total_MI', 'background', 'lumen', 'guidewire', 'intima', 'lipid', 'calcium', 'media', 'catheter', 'sidebranch', 'healedplaque', 'AUC_Entropy', 'total_Entropy', 'background', 'lumen', 'guidewire', 'intima', 'lipid', 'calcium', 'media', 'catheter', 'sidebranch', 'healedplaque'])
@@ -200,7 +204,7 @@ def inference(
     seperate_performance_ens = {"0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "7": [], "8": [], "9": []}
     #pd.DataFrame(columns=['file_name', 'dice', 'background', 'lumen', 'guidewire', 'intima', 'lipid', 'calcium', 'media', 'catheter', 'sidebranch', 'healedplaque'])
 
-    image_samples = 0
+    image_samples = 20
 
     if tta_samples > 0:
         save_dir_images = str(save_dir) + "/images_tta"
@@ -221,20 +225,9 @@ def inference(
         else: 
             outputs, image, labels = make_predictions_ensemble(sample, model, nr_ensembles)
 
-        if polish_data:
-            plot_image_overlay_labels(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), file_path=save_dir_images, file_name=file_name + "_pred")
-            plot_image_overlay_labels(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), file_path=save_dir_images, file_name=file_name + "_image", alpha=0)
-            
-            mi_map = normalise_uncertainty(MI(outputs), outputs.mean(axis=0).argmax(axis=0))
-            entropy_map = normalise_uncertainty(entropy(outputs), outputs.mean(axis=0).argmax(axis=0))
-            print("MI: ", mi_map.mean())
-            print("Entropy: ", entropy_map.mean())
+        predictions = outputs.mean(axis=0).argmax(axis=0)
 
-            plot_uncertainty(mi_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_MI", metric="MI", title=f"{mi_map.mean()}")
-            plot_uncertainty(entropy_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_en", metric="Entropy", title=f"{entropy_map.mean()}")
-            continue
-
-        dice_per_class = dice_score(outputs.mean(axis=0).argmax(axis=0), labels.squeeze())
+        dice_per_class = dice_score(predictions, labels.squeeze())
         dice = np.nanmean(dice_per_class[1:])
 
         # save seperate performance for each ensemble
@@ -249,6 +242,7 @@ def inference(
                 
                 seperate_performance_ens[str(i)].append(dice_list)
 
+
         # dice metrics
         metrics_list = [file_name, dice]
         for item in dice_per_class:
@@ -256,6 +250,8 @@ def inference(
 
         mi_map = MI(outputs)
         auc_roc = AUCROC(outputs, mi_map, labels)
+
+        brier_map = brier_score(outputs)
 
         metrics_list.append(auc_roc)
         metrics.loc[len(metrics)] = metrics_list
@@ -265,21 +261,45 @@ def inference(
         mi_per_class = MI_per_class(outputs)
         uncertainty_list.append(np.mean(mi_per_class))
         for mi in mi_per_class:
-            uncertainty_list.append(normalise_uncertainty(mi.mean(), outputs.mean(axis=0).argmax(axis=0)))
+            uncertainty_list.append(normalise_uncertainty(mi.mean(), predictions))
 
         entropy_map = entropy(outputs)
         en_per_class = entropy_per_class(outputs)
+
+
+
+        # p = np.percentile(entropy_map.flatten(), 95)
+        # certain = np.where(entropy_map < p, entropy_map, -1)
+
+        # uncertain_pixels = np.where(certain == -1, outputs.mean(axis=0).argmax(axis=0), 10)
+        # unique, counts = np.unique(outputs.mean(axis=0).argmax(axis=0), return_counts=True)
+        # pixel_counts = dict(zip(unique, counts))
+        # unique_uncertain, counts_uncertain = np.unique(uncertain_pixels, return_counts=True)
+        # pixels_uncertain = dict(zip(unique_uncertain, counts_uncertain))
+        
+        # for i in range(11):
+        #     if i in pixel_counts and i in pixels_uncertain:
+        #         if (pixel_counts[i]/1.1) < pixels_uncertain[i]:
+        #             print(file_name)
+        #             print(i, pixel_counts[i], pixels_uncertain[i])
+        #             save_path_filtered = save_dir_images + "/whole_class_filtered"
+        #             plot_image_overlay_labels(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), file_path=save_path_filtered, file_name=file_name + "_pred")
+        #             plot_image_overlay_labels(image.squeeze(), labels, file_path=save_path_filtered, file_name=file_name)
+        #             plot_uncertainty(entropy_map, file_path=save_path_filtered, file_name=file_name + "_uncertainty_en", metric="Entropy")
+        #             plot_image_prediction_certain(image.squeeze(), outputs, entropy_map, file_path=save_path_filtered, file_name=file_name + "_certain_labels_en", percentile=95)
+
+                    
         uncertainty_list.append(AUCROC(outputs, entropy_map, labels))
         uncertainty_list.append(np.mean(en_per_class))
 
         for en in en_per_class:
-            uncertainty_list.append(normalise_uncertainty(en.mean(), outputs.mean(axis=0).argmax(axis=0)))
+            uncertainty_list.append(normalise_uncertainty(en.mean(), predictions))
         uncertainty_metrics.loc[len(uncertainty_metrics)] = uncertainty_list
 
 
         # vessel fraction vs uncertainty scores
-        uncertainty_score_en, vessel_fraction = fraction_uncertainty(entropy_map, outputs.mean(axis=0).argmax(axis=0))
-        uncertainty_score_mi, vessel_fraction = fraction_uncertainty(mi_map, outputs.mean(axis=0).argmax(axis=0))
+        uncertainty_score_en, vessel_fraction = fraction_uncertainty(entropy_map, predictions)
+        uncertainty_score_mi, vessel_fraction = fraction_uncertainty(mi_map, predictions)
         uncertainty_scores_en.append(uncertainty_score_en)
         uncertainty_scores_mi.append(uncertainty_score_mi)
         vessel_fractions.append(vessel_fraction)
@@ -317,24 +337,50 @@ def inference(
         info.loc[len(info)] = info_list
 
         # make dataframe for the group analysis (possibly using different percentiles)
-        uncertainty_maps["avg_MI"].append(normalise_uncertainty(mi_map.mean(), outputs.mean(axis=0).argmax(axis=0)))
-        uncertainty_maps["avg_Entropy"].append(normalise_uncertainty(entropy_map.mean(), outputs.mean(axis=0).argmax(axis=0)))
+        uncertainty_maps["avg_MI"].append(normalise_uncertainty(mi_map.mean(), predictions))
+        uncertainty_maps["avg_Entropy"].append(normalise_uncertainty(entropy_map.mean(), predictions))
 
         rates = sensitivity_specificity(outputs, labels)
         indices = [4,5,8,9]
         for i in indices:
             sens_spec[i] += rates[i]
 
+        # catheter_mask = np.where(labels.squeeze() == 7, 1, 0)
+        # catheter_centroid = np.mean(np.argwhere(catheter_mask),axis=0)
+
+        # distances_catheter = dist_pixels_to_catheter()
+        # distances_closest_border = dist_pixels_to_closest_border(predictions)
+
+        # distances_lipid_certain, distances_lipid_uncertain, nr_lipid_certain, nr_lipid_uncertain = dist_uncertain_pixels_to_catheter(outputs, entropy_map, catheter_centroid)
+        # print("lipid: ")
+        # print(distances_lipid_certain, distances_lipid_uncertain)
+        # print(nr_lipid_certain, nr_lipid_uncertain)
+        # distances_calcium_certain, distances_calcium_uncertain, nr_calcium_certain, nr_calcium_uncertain = dist_uncertain_pixels_to_catheter(outputs, entropy_map, catheter_centroid)
+
+        # total_distances_lipid_certain.append(distances_lipid_certain)
+        # total_distances_lipid_uncertain.append(distances_lipid_uncertain)
+        # total_distances_calcium_certain.append(distances_calcium_certain)
+        # total_distances_calcium_uncertain.append(distances_calcium_uncertain)
+
+        
+
         # plot the first few images for inspection
+        # print("uncertainty / Dice healed plaque:", np.mean(en_per_class[9]), dice_per_class[9])
+        # if (9 in labels) and (dice_per_class[9] < 0.3 or np.mean(en_per_class[9]) > 0.05):
         if image_samples > 0:
+            print(file_name)
             plot_image_overlay_labels(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), file_path=save_dir_images, file_name=file_name + "_pred")
+            # plot_image_overlay_labels_variable_alpha(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), entropy_map, file_path = save_dir_images, file_name=file_name + "_pred_alpha")
             plot_image_overlay_labels(image.squeeze(), labels, file_path=save_dir_images, file_name=file_name)
             plot_image_overlay_labels(image.squeeze(), labels, file_path=save_dir_images, file_name=file_name + "_image", alpha=0)
+            # plot_image_overlay_labels_separated(image.squeeze(), labels, file_path=save_dir_images, file_name=file_name + "_labels_separated")
             # plot_softmax_labels_per_class(outputs, file_path=save_dir_images, file_name=file_name + "_softmax_per_class")
-            plot_uncertainty_per_class(mi_per_class, file_path=save_dir_images, file_name=file_name + "_uncertainty_per_class_MI", metric="MI")
+            # plot_uncertainty_per_class(mi_per_class, file_path=save_dir_images, file_name=file_name + "_uncertainty_per_class_MI", metric="MI")
             plot_uncertainty_per_class(en_per_class, file_path=save_dir_images, file_name=file_name + "_uncertainty_per_class_en", metric="Entropy")
-            plot_uncertainty(mi_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_MI", metric="MI")
-            plot_uncertainty(entropy_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_en", metric="Entropy")
+            
+            # plot_uncertainty(mi_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_MI", metric="MI")
+            # plot_uncertainty(entropy_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_en", metric="Entropy")
+            # plot_uncertainty(brier_map, file_path=save_dir_images, file_name=file_name + "_uncertainty_brier", metric="Brier")
             # plot_image_prediction_certain(image.squeeze(), outputs, entropy_map, file_path=save_dir_images, file_name=file_name + "_certain_labels_en")
             # plot_image_prediction_certain(image.squeeze(), outputs, mi_map, file_path=save_dir_images, file_name=file_name + "_certain_labels_MI")
             # plot_image_prediction_wrong(image.squeeze(), outputs.mean(axis=0).argmax(axis=0), labels.squeeze(), file_path=save_dir_images, file_name=file_name + "_wrong")
@@ -345,20 +391,26 @@ def inference(
         gc.collect()
         torch.cuda.empty_cache()
 
+    uncertain_images = filter_uncertain_images(uncertainty_maps["avg_Entropy"], percentile=90)
+    print("uncertain image files: ", info["file_name"].values[uncertain_images])
+
     for column in metrics.columns:
         if column != "file_name":
             metrics[column] = metrics[column].apply(lambda x: None if x == 1 else x)
             metrics.loc["mean", column] = metrics[column].mean(skipna=True)
+            metrics.loc["std", column] = metrics[column].std(skipna=True)
 
     for column in uncertainty_metrics.columns:
         if column != "file_name":
             uncertainty_metrics.loc["mean", column] = uncertainty_metrics[column].mean(skipna=True)
+            uncertainty_metrics.loc["std", column] = uncertainty_metrics[column].std(skipna=True)
     
     for column in group_dice_en.columns:
         if column != "file_name":
             group_dice_en.loc["mean", column] = group_dice_en[column].mean(skipna=True)
+            group_dice_en.loc["std", column] = group_dice_en[column].std(skipna=True)
 
-    plot_uncertainty_vs_vessel_fraction(uncertainty_scores_en, uncertainty_scores_mi, vessel_fractions, str(save_dir))
+    # plot_uncertainty_vs_vessel_fraction(uncertainty_scores_en, uncertainty_scores_mi, vessel_fractions, str(save_dir))
 
     if nr_ensembles > 0:
         print("performance for seperate ens models")
@@ -396,9 +448,15 @@ def inference(
         sensitivity = TP / (TP + FN)
         specificity = TN / (TN + FP)
         print(NEW_CLASS_DICT[i], "sensitivity / specificity: ", sensitivity, specificity)
-    uncertain_images = filter_uncertain_images(uncertainty_maps["avg_Entropy"], percentile=90)
+    # uncertain_images = filter_uncertain_images(uncertainty_maps["avg_Entropy"], percentile=90)
 
-    print("uncertain image files: ", info["file_name"].values[uncertain_images])
+    # print(np.nanmean(total_distances_lipid_certain), np.nanmean(total_distances_lipid_uncertain))
+    # print(np.nanstd(total_distances_lipid_certain), np.nanstd(total_distances_lipid_uncertain))
+    # print(np.nanmean(total_distances_calcium_certain), np.nanmean(total_distances_calcium_uncertain))
+    # print(np.nanstd(total_distances_calcium_certain), np.nanstd(total_distances_calcium_uncertain))
+
+
+    # print("uncertain image files: ", info["file_name"].values[uncertain_images])
     info["mean_en"] = uncertainty_maps["avg_Entropy"]
     info["mean_mi"] = uncertainty_maps["avg_MI"]
     info["uncertain"] = uncertain_images
@@ -424,16 +482,18 @@ def inference(
     print("fraction of images with lipid: ", np.count_nonzero(info[info["uncertain"] == True]["percentage_lipid"].values != 0)/len(info[info["uncertain"] == True]), " / ", np.count_nonzero(info["percentage_lipid"].values != 0)/len(info))
     print("fraction of images with calcium: ", np.count_nonzero(info[info["uncertain"] == True]["percentage_calcium"].values != 0)/len(info[info["uncertain"] == True]), " / ", np.count_nonzero(info["percentage_calcium"].values != 0)/len(info))
 
-    for c in range(NEW_CLASSES):
-        print("\ncertainty for class: ", NEW_CLASS_DICT[c])
-        clas = "".join(NEW_CLASS_DICT[c].split(" "))
-        # print((uncertainty_metrics[info["uncertain"] == True][NEW_CLASS_DICT[c]].values).mean())
-        print("avg dice uncertain images: ", np.nanmean(metrics[:-1][info["uncertain"] == True][clas].values), " / ", np.nanmean(metrics[clas][:-1].values))
-        print("avg dice certain images: ", np.nanmean(metrics[:-1][info["uncertain"] == False][clas].values), " / ", np.nanmean(metrics[clas][:-1].values))
-        # print("avg dice certain images: ", (uncertainty_metrics[info["uncertain"] == False][NEW_CLASS_DICT[c]].values).mean(), " / ", (uncertainty_metrics[NEW_CLASS_DICT[c]].values).mean())
-        # print("avg dice uncertain images (certain pixels): ", (uncertainty_metrics[info["uncertain"] == True][NEW_CLASS_DICT[c]].values).mean(), " / ", (uncertainty_metrics[NEW_CLASS_DICT[c]].values).mean())
+    print("dice when only taking images with class in ground truth:")
+    for column in metrics.columns:
+        if column != "file_name":
+            mean_class = metrics[column][metrics[column] > 0.001].mean(skipna=True)
+            print(column, mean_class)
+        
 
-    
+    # for c in range(NEW_CLASSES):
+        # print("\ncertainty for class: ", NEW_CLASS_DICT[c])
+        # clas = "".join(NEW_CLASS_DICT[c].split(" "))
+        # print("avg dice uncertain images: ", np.nanmean(info[info["uncertain"] == True]["dice"][clas].values), " / ", np.nanmean(info["dice"][clas].values))
+        # print("avg dice certain images: ", np.nanmean(info[info["uncertain"] == False]["dice"][clas].values), " / ", np.nanmean(info["dice"][clas].values))
 
     #roc code from: https://stats.stackexchange.com/questions/186337/average-roc-for-repeated-10-fold-cross-validation-with-probability-estimates
     # tprs = np.array(tprs)
@@ -466,6 +526,7 @@ def main():
     parser.add_argument("--tta_samples", type=int, default=0, help='number of mc samples')
     parser.add_argument("--debug", default=False, action=argparse.BooleanOptionalAction)
     parser.add_argument("--polish_data", default=False, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--test", default=False, action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
     data_dir = Path(args.data_dir)
@@ -474,7 +535,9 @@ def main():
     else:
         save_dir = Path(args.save_dir)
 
-    inference(data_dir, save_dir, dropout=args.dropout, mc_samples=args.mc_samples, model_id=args.model_id, nr_ensembles=args.ensembles, tta_samples=args.tta_samples, debug=args.debug, polish_data=args.polish_data)
+    val = not args.test
+
+    inference(data_dir, save_dir, dropout=args.dropout, mc_samples=args.mc_samples, model_id=args.model_id, nr_ensembles=args.ensembles, tta_samples=args.tta_samples, debug=args.debug, polish_data=args.polish_data, validation=val)
 
 if __name__ == "__main__":
     main()
@@ -482,3 +545,18 @@ if __name__ == "__main__":
 
 # python inference.py --data_dir "./data/val" --save_dir "./data"
 # /data/diag/rubenvdw/nnU-net/Codes/dataset-conversion/Carthesian_view/15_classes/segs_conversion_2d
+
+
+
+
+# import numpy as np
+# import pandas as pd
+
+# metrics = pd.read_csv("/data/diag/leahheil/semi_final_figures/metrics/ensembles/metrics_10.csv")
+
+# for column in metrics.columns:
+#     if column != "file_name":
+#         mean_class = metrics["lipid"][metrics["lipid"] > 0.001].mean(skipna=True)
+#         print(column, mean_class)
+
+# metrics = pd.read_csv("/data/diag/leahheil/saved/metrics_mc2.csv")
